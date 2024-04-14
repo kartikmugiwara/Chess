@@ -1,4 +1,4 @@
-#include <SFML/Graphics.hpp>
+// #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <iostream>
 #include <string.h>
@@ -7,20 +7,20 @@
 #include <piece.hpp>
 #include <costume.hpp>
 
-
+#include <statemachine.hpp>
 
 
 
 // function that taks piece, current pos and spits possible squares?
 // possible square()
 
-
+stateManager* stateManager::instance_ptr =nullptr;
+stateManager* smInst = stateManager::getInstance();
 
 class GameHandler{
     public:
         GameHandler();
         void run();
-        CostumeHandler pieceCostHandler;
     private:
         void render();
         void processInputs();
@@ -34,7 +34,7 @@ class GameHandler{
         sf::Texture testTexture;
         sf::Sprite player;
         char direction;
-        Piece pawn;
+        // Piece pawn;
 
 
     // protected:
@@ -42,9 +42,14 @@ class GameHandler{
 
 void GameHandler::render(){
     mainWindow.clear();
-    mainWindow.draw(testBall);
-    mainWindow.draw(player);
-    mainWindow.draw(*pawn.getSprite());
+    for(std::map<std::string, Piece* >::iterator iter = (smInst->worldMap).begin();iter!=(smInst->worldMap).end();iter++)
+    {
+        mainWindow.draw(*((iter->second)->getSprite()));
+        ((iter->second)->getSprite())->setScale(6.0, 6.0);
+        // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
+    }
+    // std::cout << "abc" << std::endl;
+    // mainWindow.draw(*pawn.getSprite());
     mainWindow.display();
 }
 
@@ -58,9 +63,9 @@ void GameHandler::processInputs(){
             case sf::Event::KeyReleased:
                 handleKeyInput(windowEvents.key.code, false);
                 break;
-            // case sf::Event::MouseButtonPressed:
-            //     std::cout << "Button Down : "<< sf::Mouse::getPosition().x << " " << sf::Mouse::getPosition().y << std::endl;
-            //     break;
+            case sf::Event::MouseButtonPressed:
+                std::cout << "Button Down : "<< sf::Mouse::getPosition().x << " " << sf::Mouse::getPosition().y << std::endl;
+                break;
             case sf::Event::Closed:
                 mainWindow.close();
                 break;
@@ -130,11 +135,10 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
 
 }
 
-GameHandler::GameHandler(): mainWindow(sf::VideoMode(1000, 500), "PID Target System")
+GameHandler::GameHandler(): mainWindow(sf::VideoMode(96, 96), "PID Target System", 5U)
                                 ,masterClock()
                                 ,testBall(10.0f)
 {
-    pieceCostHandler.loadCostume(TextureID::pieceID::Pawn, "Pawn.png");
     testBall.setFillColor(sf::Color(2,128,233,45));
     testBall.setPosition( 0 , 0 );
     direction = 0 ;
@@ -144,10 +148,10 @@ GameHandler::GameHandler(): mainWindow(sf::VideoMode(1000, 500), "PID Target Sys
     }
 
     player.setTexture(testTexture);
-    pawn.setTexture(pieceCostHandler.getCostume(TextureID::pieceID::Pawn));
     player.scale(0.5, 0.5);
     std::cout << "Player info: " << testTexture.getSize().x << testTexture.getSize().y << testTexture.getMaximumSize()<<  std::endl ; // see flush effect here by removing endl :)
-    
+    smInst->resetGame();
+    // std::cout << *vecKey(sf::Vector2i(1,11))<< static_cast<char>(64)<<std::endl;
 }
 
 

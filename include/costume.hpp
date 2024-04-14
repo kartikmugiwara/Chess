@@ -9,12 +9,12 @@
 
 class CostumeHandler{
 public:
-bool loadCostume(TextureID::pieceID id, const std::string& filename);
-sf::Texture& getCostume(TextureID::pieceID id);
+bool loadCostume(TextureID::pieceName id, const std::string& filename);
+sf::Texture& getCostume(TextureID::pieceName id);
 
 private:
 
-std::map<TextureID::pieceID, std::unique_ptr<sf::Texture> > textureMap;
+std::map<TextureID::pieceName, std::unique_ptr<sf::Texture> > textureMap;
 
 
 };

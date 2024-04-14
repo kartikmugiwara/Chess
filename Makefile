@@ -5,7 +5,7 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -std=c++11 -Wall -Iinclude
+CXXFLAGS = -std=c++11 -Iinclude
 
 # SFML libraries
 LIBS = -lsfml-graphics -lsfml-window -lsfml-system

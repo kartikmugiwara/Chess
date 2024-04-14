@@ -1,5 +1,6 @@
 #include <piece.hpp>
 
+uint16_t Piece::globalPieceID = 0;
 uint8_t Piece::getHeartbeat(){
     return pulse;
 }
@@ -24,10 +25,18 @@ sf::Sprite* Piece::getSprite(){
     return &pieceSprite;
 }
 
-sf::Time Piece::getRemTime(){
-    return remTime;
+uint16_t Piece::getPieceID(){
+    return pieceID;
 }
 
-void Piece::updateRemTime(sf::Time time){
-    remTime += time;
+TextureID::pieceName Piece::getPieceType(){
+    return pieceType;
+}
+
+uint8_t Piece::getplayerID(){
+    return playerID;
+}
+
+void Piece::setPlayerID(uint8_t player){
+    playerID = player; 
 }
