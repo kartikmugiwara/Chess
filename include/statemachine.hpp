@@ -26,14 +26,14 @@ std::string* vecKey(sf::Vector2i vec){// limited to 26 columncs
 
 const pieceInfo defaultPieceList1[]=
                                 {
-                                    { TextureID::pieceName::Rook, sf::Vector2i(1,0)  },
-                                    { TextureID::pieceName::Knight, sf::Vector2i(2,0)  },
-                                    { TextureID::pieceName::Bishop, sf::Vector2i(3,0)  },
-                                    { TextureID::pieceName::Queen, sf::Vector2i(4,0)  },
-                                    { TextureID::pieceName::King, sf::Vector2i(5,0)  },
-                                    { TextureID::pieceName::Bishop, sf::Vector2i(6,0)  },
-                                    { TextureID::pieceName::Knight, sf::Vector2i(7,0)  },
-                                    { TextureID::pieceName::Rook, sf::Vector2i(8,0)  },
+                                    { TextureID::pieceName::Rook, sf::Vector2i(1,1)  },
+                                    { TextureID::pieceName::Knight, sf::Vector2i(2,1)  },
+                                    { TextureID::pieceName::Bishop, sf::Vector2i(3,1)  },
+                                    { TextureID::pieceName::Queen, sf::Vector2i(4,1)  },
+                                    { TextureID::pieceName::King, sf::Vector2i(5,1)  },
+                                    { TextureID::pieceName::Bishop, sf::Vector2i(6,1)  },
+                                    { TextureID::pieceName::Knight, sf::Vector2i(7,1)  },
+                                    { TextureID::pieceName::Rook, sf::Vector2i(8,1)  },
                                 };
 
 const std::string pieceLoadFile[]=
@@ -107,7 +107,7 @@ class stateManager{
         static stateManager* getInstance();
         void resetGame();
         void refreshBoard();
-
+        Piece* getHeldRef(sf::Vector2i);
 };
 
 
@@ -127,17 +127,26 @@ void stateManager::resetGame(){
     Player* playerA = new Player(1);
     Player* playerB = new Player(2);
     // TODO : erase worldmap 
-    uint8_t royalOffset = 0, pawnOffset=1;
+    worldMap.clear();
+    pieceVec.clear();
+    uint8_t royalOffset = 0, pawnOffset=2;
     for(uint8_t i=1; i<=8 ;i++) //defaultlist size hardcoded . //TODO: Here insert could be problematic. should check if key exists and all.
     {
         sf::Vector2i pos = defaultPieceList1[i-1].piecePos + sf::Vector2i(0,royalOffset);
         Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos}, 1);
+        royal->updatePos(pos);
         worldMap.insert({*vecKey(pos), royal} );
         pos = sf::Vector2i(i, pawnOffset);
         Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos}, 1);
-        worldMap.insert(std::pair<std::string,Piece* >(*vecKey(pos), pawn) );
+        pawn->updatePos(pos);        
+        worldMap.insert({*vecKey(pos), pawn} );
         royal->setTexture(pieceCostHandler.getCostume(royal->getPieceType()));
         pawn->setTexture(pieceCostHandler.getCostume(pawn->getPieceType()));
+        royal->getSprite()->setScale(SCALE_F, SCALE_F);
+        pawn->getSprite()->setScale(SCALE_F, SCALE_F);
+
+        // pieceVec.push_back(pawn);
+        // pieceVec.push_back();
 
     }
 }
@@ -146,9 +155,16 @@ void stateManager::refreshBoard(){
     for(std::map<std::string, Piece* >::iterator iter = worldMap.begin();iter!=worldMap.end();iter++)
     {
         // mainWindow.draw(*((iter->second)->getSprite()));
-        ((iter->second)->getSprite())->setScale(6.0, 6.0);
+        ((iter->second)->getSprite())->setScale(SCALE_F, SCALE_F);
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
     }
 }
 
+Piece* stateManager::getHeldRef(sf::Vector2i mouse){
+    mouse.x = mouse.x / (PIECE_SIZE + 2*PIECE_PAD) + 1;
+    mouse.y = mouse.y / (PIECE_SIZE + 2*PIECE_PAD) + 1;
+
+    std::map<std::string, Piece* >::iterator iter = worldMap.find(*vecKey(mouse));
+    return iter == worldMap.end() ? nullptr: iter->second ;
+}
 #endif

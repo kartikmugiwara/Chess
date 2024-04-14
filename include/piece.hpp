@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 
+
 struct pieceInfo{
     TextureID::pieceName pieceType;
     sf::Vector2i piecePos; 

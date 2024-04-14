@@ -2,5 +2,9 @@
 #define __INCLUDE_GAMECONFIG__
 
 #define PLAYER_NUM 2
-
+#define PIECE_DIM 16
+#define SCALE_F 6.0
+#define PIECE_SIZE PIECE_DIM * SCALE_F
+#define PIECE_PAD 10
+#define WINDOW_SIZE 8*(PIECE_SIZE + 2*PIECE_PAD)
 #endif 

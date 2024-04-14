@@ -1,4 +1,5 @@
 #include <piece.hpp>
+#include <gameconfig.hpp>
 
 uint16_t Piece::globalPieceID = 0;
 uint8_t Piece::getHeartbeat(){
@@ -15,6 +16,7 @@ sf::Vector2i Piece::getPos(){
 
 void Piece::updatePos(sf::Vector2i newCord){ // TODO: maybe some movePos kind of thing can be added as well.
     pos = newCord;
+    pieceSprite.setPosition((newCord.x -1)  * (PIECE_SIZE + 2*PIECE_PAD) + PIECE_PAD , (newCord.y-1) * (PIECE_SIZE + 2*PIECE_PAD) + PIECE_PAD);
 }
 
 void Piece::setTexture(sf::Texture& texture){

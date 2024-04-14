@@ -34,6 +34,10 @@ class GameHandler{
         sf::Texture testTexture;
         sf::Sprite player;
         char direction;
+        bool isMousePressed = false;
+        bool checkedPiece = false;
+        Piece* heldPiece;
+        Piece* currentHeldPiece;
         // Piece pawn;
 
 
@@ -45,8 +49,9 @@ void GameHandler::render(){
     for(std::map<std::string, Piece* >::iterator iter = (smInst->worldMap).begin();iter!=(smInst->worldMap).end();iter++)
     {
         mainWindow.draw(*((iter->second)->getSprite()));
-        ((iter->second)->getSprite())->setScale(6.0, 6.0);
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
+        // std::cout << "abc" <<static_cast<int>((iter->second)->getPos().x)<< " " << static_cast<int>((iter->second)->getPos().y) << std::endl;        
+
     }
     // std::cout << "abc" << std::endl;
     // mainWindow.draw(*pawn.getSprite());
@@ -64,7 +69,13 @@ void GameHandler::processInputs(){
                 handleKeyInput(windowEvents.key.code, false);
                 break;
             case sf::Event::MouseButtonPressed:
-                std::cout << "Button Down : "<< sf::Mouse::getPosition().x << " " << sf::Mouse::getPosition().y << std::endl;
+                std::cout << "Button Down : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
+                isMousePressed = true;
+                break;
+            case sf::Event::MouseButtonReleased:
+                std::cout << "Button Up : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
+                isMousePressed = false;
+                checkedPiece = false;
                 break;
             case sf::Event::Closed:
                 mainWindow.close();
@@ -75,6 +86,7 @@ void GameHandler::processInputs(){
 
 void GameHandler::update(sf::Time deltaTime){
     // testBall.setRadius( (int)(masterClock.getElapsedTime().asMilliseconds() )% 255);
+    sf::Vector2i mousePos = sf::Mouse::getPosition(mainWindow);
     testBall.setFillColor(sf::Color(0.3*masterClock.getElapsedTime().asMilliseconds(),128,233,100));
     sf::Vector2f movement(0.0f, 0.0f);
     #define DELTA 500.0f
@@ -88,7 +100,29 @@ void GameHandler::update(sf::Time deltaTime){
         movement.x += DELTA;
     
     testBall.move(movement * deltaTime.asSeconds());
+    if(isMousePressed)
+    {
+        if( mousePos.x < 0)
+            sf::Mouse::setPosition(sf::Vector2i(0,mousePos.y), mainWindow);
+        if( mousePos.y < 0)
+            sf::Mouse::setPosition(sf::Vector2i(mousePos.x,0), mainWindow);
+        if( mousePos.x > WINDOW_SIZE)
+            sf::Mouse::setPosition(sf::Vector2i(WINDOW_SIZE, mousePos.y ), mainWindow);
+        if( mousePos.y > WINDOW_SIZE)
+            sf::Mouse::setPosition(sf::Vector2i(mousePos.x, WINDOW_SIZE), mainWindow);
 
+        mousePos = sf::Mouse::getPosition(mainWindow);
+
+        if(!checkedPiece){
+            heldPiece = smInst->getHeldRef(mousePos);
+            checkedPiece = true;
+        }
+        if(heldPiece != nullptr)
+        {
+            heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+        }
+        std::cout << "Button now : "<< mousePos.x << " " << mousePos.y << std::endl;
+    }
     // std::cout << std::dec << (int)testBall.getPosition().x << std::endl;
     // testBall.setPosition(sf::Mouse::getPosition().x , sf::Mouse::getPosition().y );
 }
@@ -135,7 +169,7 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
 
 }
 
-GameHandler::GameHandler(): mainWindow(sf::VideoMode(96, 96), "PID Target System", 5U)
+GameHandler::GameHandler(): mainWindow(sf::VideoMode(8*(PIECE_SIZE + 2*PIECE_PAD), 8*(PIECE_SIZE + 2*PIECE_PAD)), "We have Chess.com at home", 5U)
                                 ,masterClock()
                                 ,testBall(10.0f)
 {
