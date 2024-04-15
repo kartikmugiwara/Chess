@@ -104,10 +104,13 @@ class stateManager{
     public:
         std::map<std::string, Piece* > worldMap;
         std::vector<Piece*> pieceVec;
+        std::vector<sf::Vector2i> possibleSquares; // TODO: this is primitive, without taking many things into account
+        
         static stateManager* getInstance();
         void resetGame();
-        void refreshBoard();
+        void updateBoard(Piece* t_piece, sf::Vector2i t_pos);
         Piece* getHeldRef(sf::Vector2i);
+        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos);
 };
 
 
@@ -151,11 +154,17 @@ void stateManager::resetGame(){
     }
 }
 
-void stateManager::refreshBoard(){
+void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
     for(std::map<std::string, Piece* >::iterator iter = worldMap.begin();iter!=worldMap.end();iter++)
     {
+        if(iter->second->getPieceID() == t_piece->getPieceID())
+        {
+            worldMap.erase(iter);
+            worldMap.insert({*vecKey(t_pos), t_piece});
+            break;
+        }
         // mainWindow.draw(*((iter->second)->getSprite()));
-        ((iter->second)->getSprite())->setScale(SCALE_F, SCALE_F);
+        // ((iter->second)->getSprite())->setScale(SCALE_F, SCALE_F);
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
     }
 }
@@ -167,4 +176,53 @@ Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     std::map<std::string, Piece* >::iterator iter = worldMap.find(*vecKey(mouse));
     return iter == worldMap.end() ? nullptr: iter->second ;
 }
+
+std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos ){
+    //TODO: direction variable incorporation for player 2
+    possibleSquares.clear();
+    switch(t_pieceType){
+        case TextureID::pieceName::Pawn:
+        {
+            if(worldMap.find(*vecKey(currPos + sf::Vector2i(0,1))) == worldMap.end()) // nothing in front
+                possibleSquares.push_back(currPos + sf::Vector2i(0,1));
+            if(worldMap.find(*vecKey(currPos + sf::Vector2i(-1,1))) != worldMap.end() && worldMap[*vecKey(currPos + sf::Vector2i(-1,1))]->getplayerID()!= t_playerID)
+                possibleSquares.push_back(currPos + sf::Vector2i(-1,1));
+            if(worldMap.find(*vecKey(currPos + sf::Vector2i(1,1))) != worldMap.end() && worldMap[*vecKey(currPos + sf::Vector2i(1,1))]->getplayerID()!= t_playerID)
+                possibleSquares.push_back(currPos + sf::Vector2i(1,1));
+        }
+        break;    
+        case TextureID::pieceName::Queen:
+        {
+
+        }
+        break;
+        case TextureID::pieceName::Knight:
+        {
+
+        }
+        break;
+        case TextureID::pieceName::Bishop:
+        {
+
+        }
+        break;
+        case TextureID::pieceName::Rook:
+        {
+
+        }
+        break;
+        case TextureID::pieceName::King:
+        {
+
+        }
+        break;
+        default:
+        {
+            std::cout << "Some unknown character has entered battlefield! " << std::endl;
+        }
+
+    }
+    return &possibleSquares;
+}
+
 #endif

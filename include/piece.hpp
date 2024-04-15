@@ -30,7 +30,7 @@ public:
     uint8_t getHeartbeat();
     void updateHeartbeat(uint8_t status);
     sf::Vector2i getPos();
-    void updatePos(sf::Vector2i newCord);  // THINK: should this check if it can move or not or leave it to manager. BEtter to leave it to manager
+    void updatePos(sf::Vector2i newCord, bool set = 1);  // THINK: should this check if it can move or not or leave it to manager. BEtter to leave it to manager
     uint16_t getPieceID();
     uint8_t getplayerID();
     void setPlayerID(uint8_t player);

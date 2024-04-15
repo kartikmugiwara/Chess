@@ -17,6 +17,68 @@
 stateManager* stateManager::instance_ptr =nullptr;
 stateManager* smInst = stateManager::getInstance();
 
+class movementCircle
+{
+    movementCircle(){
+        for(uint8_t i=0; i<BOARD_SIZE; i++)
+            for(uint8_t j=0; j<BOARD_SIZE; j++)
+            {
+                cshape[i][j].setRadius(10);
+                cshape[i][j].setPointCount(30);
+                cshape[i][j].setPosition((i)*(PIECE_SIZE+2*PIECE_PAD)+(PIECE_SIZE/2 ), (j*(PIECE_SIZE+2*PIECE_PAD))+(PIECE_SIZE/2 ));
+                cshape[i][j].setFillColor(sf::Color(0, 0, 0, 0));
+            }
+    }
+
+
+    private:
+        movementCircle(const movementCircle&) = delete;
+        void operator=(const movementCircle&) = delete;
+
+        static movementCircle* instance_ptr;
+        static sf::CircleShape cshape[BOARD_SIZE][BOARD_SIZE];
+
+    public:
+        static movementCircle* getInstance();
+        static void renderAll(sf::RenderWindow&);
+
+        void setVisible(uint8_t i, uint8_t j);
+        void setInvisible(uint8_t i, uint8_t j);
+};
+
+movementCircle* movementCircle::getInstance(){
+    if(movementCircle::instance_ptr == nullptr)
+    {
+        movementCircle::instance_ptr = new movementCircle();
+    }
+
+    return movementCircle::instance_ptr;
+}
+
+void movementCircle::setVisible(uint8_t i, uint8_t j){
+    movementCircle::cshape[i-1][j-1].setFillColor(sf::Color(128, 0, 0, 80));
+}
+
+
+void movementCircle::setInvisible(uint8_t i, uint8_t j){
+    movementCircle::cshape[i-1][j-1].setFillColor(sf::Color(128, 0, 0, 0));
+}
+
+void movementCircle::renderAll(sf::RenderWindow& window){
+    movementCircle* mcInst = movementCircle::getInstance();
+    for(uint8_t i=0; i<BOARD_SIZE; i++)
+        for(uint8_t j=0; j<BOARD_SIZE; j++)
+        {
+            // mcInst->setVisible(i, j);
+            window.draw(movementCircle::cshape[i][j]);
+        }
+}
+
+sf::CircleShape movementCircle::cshape[BOARD_SIZE][BOARD_SIZE];
+movementCircle* movementCircle::instance_ptr =nullptr;
+movementCircle* mcInst = movementCircle::getInstance();
+
+
 class GameHandler{
     public:
         GameHandler();
@@ -35,8 +97,12 @@ class GameHandler{
         sf::Sprite player;
         char direction;
         bool isMousePressed = false;
+        bool isMouseReleased = false;
         bool checkedPiece = false;
-        Piece* heldPiece;
+        uint8_t pieceSelectFlag=0;
+        Piece* heldPiece, *previousHeldPiece;
+        std::vector<sf::Vector2i>* possibleSquares;
+
         Piece* currentHeldPiece;
         // Piece pawn;
 
@@ -46,6 +112,7 @@ class GameHandler{
 
 void GameHandler::render(){
     mainWindow.clear();
+
     for(std::map<std::string, Piece* >::iterator iter = (smInst->worldMap).begin();iter!=(smInst->worldMap).end();iter++)
     {
         mainWindow.draw(*((iter->second)->getSprite()));
@@ -53,6 +120,9 @@ void GameHandler::render(){
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPos().x)<< " " << static_cast<int>((iter->second)->getPos().y) << std::endl;        
 
     }
+
+    mcInst->renderAll(mainWindow);
+
     // std::cout << "abc" << std::endl;
     // mainWindow.draw(*pawn.getSprite());
     mainWindow.display();
@@ -69,13 +139,26 @@ void GameHandler::processInputs(){
                 handleKeyInput(windowEvents.key.code, false);
                 break;
             case sf::Event::MouseButtonPressed:
-                std::cout << "Button Down : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
+                // std::cout << "Button Down : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
                 isMousePressed = true;
                 break;
             case sf::Event::MouseButtonReleased:
-                std::cout << "Button Up : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
+                // std::cout << "Button Up : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
                 isMousePressed = false;
-                checkedPiece = false;
+                isMouseReleased = true;
+                if(checkedPiece)
+                {
+                    checkedPiece = false;
+                    if(pieceSelectFlag == 2 )
+                    {
+                        pieceSelectFlag = 0;
+                        // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                        // {
+                        //     std::cout<< iter->x << " " << iter->y << std::endl;
+                        //     mcInst->setInvisible(iter->x, iter->y);
+                        // }
+                    }
+                }
                 break;
             case sf::Event::Closed:
                 mainWindow.close();
@@ -114,14 +197,82 @@ void GameHandler::update(sf::Time deltaTime){
         mousePos = sf::Mouse::getPosition(mainWindow);
 
         if(!checkedPiece){
+            previousHeldPiece = heldPiece;
             heldPiece = smInst->getHeldRef(mousePos);
+            if(heldPiece!=nullptr){
+                if(heldPiece != previousHeldPiece && previousHeldPiece!=nullptr)
+                {
+                    for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                    {
+                        std::cout<< iter->x << " " << iter->y << std::endl;
+                        mcInst->setInvisible(iter->x, iter->y);
+                    }
+                }
+                possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos());
+                for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                {
+                    std::cout<< iter->x << " " << iter->y << std::endl;
+                    mcInst->setVisible(iter->x, iter->y);
+                }
+                
+                if(previousHeldPiece == heldPiece && pieceSelectFlag==1)
+                {
+                    pieceSelectFlag = 2;
+                }
+                if (pieceSelectFlag==0)
+                {
+                    pieceSelectFlag = 1;
+                }
+            }
+            else // clicked on some blank space. toggle selection
+            {
+
+            }
             checkedPiece = true;
         }
+        if(heldPiece != nullptr) // Also write function to check valid square and single click processing as well
+        {
+
+            heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)), 0); //note use of 0, so getpos is not updated here only sprite pos
+            // heldPiece->getSprite()->setPosition(static_cast<sf::Vector2f>(mousePos)); // For smooth drag movement
+        
+        }
+        // std::cout << "Button now : "<< mousePos.x << " " << mousePos.y << std::endl;
+    }
+
+    if(isMouseReleased){
+        // if()// TODO check if position is valid
         if(heldPiece != nullptr)
         {
-            heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+            // if kept at new square or double clicked on same piece then set indicator incisible
+            if(heldPiece->getPos() != sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))
+            || pieceSelectFlag==0)
+            {
+                for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                {
+                    mcInst->setInvisible(iter->x, iter->y);
+                }
+            }
+
+            // update only if kept on valid square
+            if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
+            {
+                heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+                smInst->updateBoard(heldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+            }
+            else{
+                if(pieceSelectFlag!=0) // pakad ke galat jagah rakho to red dot delete mat karna
+                    for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                    {
+                        mcInst->setVisible(iter->x, iter->y);
+                    }
+                heldPiece->updatePos(heldPiece->getPos());
+
+            }
+
+
         }
-        std::cout << "Button now : "<< mousePos.x << " " << mousePos.y << std::endl;
+        isMouseReleased = false;
     }
     // std::cout << std::dec << (int)testBall.getPosition().x << std::endl;
     // testBall.setPosition(sf::Mouse::getPosition().x , sf::Mouse::getPosition().y );

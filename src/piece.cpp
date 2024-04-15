@@ -14,8 +14,9 @@ sf::Vector2i Piece::getPos(){
     return pos;
 }
 
-void Piece::updatePos(sf::Vector2i newCord){ // TODO: maybe some movePos kind of thing can be added as well.
-    pos = newCord;
+void Piece::updatePos(sf::Vector2i newCord, bool set){ // TODO: maybe some movePos kind of thing can be added as well.
+    if(set)
+        pos = newCord;
     pieceSprite.setPosition((newCord.x -1)  * (PIECE_SIZE + 2*PIECE_PAD) + PIECE_PAD , (newCord.y-1) * (PIECE_SIZE + 2*PIECE_PAD) + PIECE_PAD);
 }
 
