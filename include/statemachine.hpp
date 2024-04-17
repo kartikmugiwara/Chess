@@ -22,6 +22,16 @@ std::string* vecKey(sf::Vector2i vec){// limited to 26 columncs
     return &key;
 }
 
+// std::map<TextureID::pieceName, std::vector<sf::Vector2i> > genericMoves={
+//     {TextureID::pieceName::Pawn, {sf::Vector2i(), }},
+//     {TextureID::pieceName::Knight, {sf::Vector2i(), sf::Vector2i(), sf::Vector2i()}},
+//     {TextureID::pieceName::Bishop, {}},
+//     {TextureID::pieceName::Rook, {}},
+//     {TextureID::pieceName::Queen, {}},
+//     {TextureID::pieceName::King, {}},
+    
+// };
+
 // dont mention pawns....8 pawns by default
 
 const pieceInfo defaultPieceList1[]=
@@ -170,18 +180,19 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
 }
 
 Piece* stateManager::getHeldRef(sf::Vector2i mouse){
-    mouse.x = mouse.x / (PIECE_SIZE + 2*PIECE_PAD) + 1;
-    mouse.y = mouse.y / (PIECE_SIZE + 2*PIECE_PAD) + 1;
+    sf::Vector2i m;
+    m.x = mouse.x / (PIECE_SIZE + 2*PIECE_PAD) + 1;
+    m.y = mouse.y / (PIECE_SIZE + 2*PIECE_PAD) + 1;
 
-    std::map<std::string, Piece* >::iterator iter = worldMap.find(*vecKey(mouse));
+    std::map<std::string, Piece* >::iterator iter = worldMap.find(*vecKey(m));
     return iter == worldMap.end() ? nullptr: iter->second ;
 }
 
 std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos ){
-    //TODO: direction variable incorporation for player 2
+    //TODO: direction variable incorporation for player 2. Refactor this check afterwards
     possibleSquares.clear();
     switch(t_pieceType){
-        case TextureID::pieceName::Pawn:
+        case TextureID::pieceName::Pawn: // TODO:: enpassant and shit
         {
             if(worldMap.find(*vecKey(currPos + sf::Vector2i(0,1))) == worldMap.end()) // nothing in front
                 possibleSquares.push_back(currPos + sf::Vector2i(0,1));
@@ -198,6 +209,23 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
         break;
         case TextureID::pieceName::Knight:
         {
+            std::vector<sf::Vector2i> moves = {sf::Vector2i(1,2), sf::Vector2i(1,-2), sf::Vector2i(2,1), sf::Vector2i(2,-1), 
+                                               sf::Vector2i(-1,2), sf::Vector2i(-1,-2), sf::Vector2i(-2,1), sf::Vector2i(-2,-1)};
+            for(std::vector<sf::Vector2i>::iterator iter = moves.begin();iter!=moves.end();iter++)
+            {
+                if((currPos.x + iter->x)>0 && (currPos.y + iter->y)>0 && (currPos.y + iter->y)<=BOARD_SIZE && (currPos.x + iter->x)<=BOARD_SIZE)
+                {
+                    if(worldMap.find(*vecKey(currPos + *iter))!=worldMap.end())
+                    {
+                        if(worldMap[*vecKey(currPos + *iter)]->getplayerID()!= t_playerID )
+                            possibleSquares.push_back(currPos + *iter);
+                    }
+                    else
+                    {
+                        possibleSquares.push_back(currPos + *iter);
+                    }
+                }
+            }
 
         }
         break;

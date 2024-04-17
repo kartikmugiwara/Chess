@@ -100,7 +100,7 @@ class GameHandler{
         bool isMouseReleased = false;
         bool checkedPiece = false;
         uint8_t pieceSelectFlag=0;
-        Piece* heldPiece, *previousHeldPiece;
+        Piece* heldPiece{nullptr}, *previousHeldPiece{nullptr};
         std::vector<sf::Vector2i>* possibleSquares;
 
         Piece* currentHeldPiece;
@@ -199,19 +199,21 @@ void GameHandler::update(sf::Time deltaTime){
         if(!checkedPiece){
             previousHeldPiece = heldPiece;
             heldPiece = smInst->getHeldRef(mousePos);
+            // std::cout << "heldpiece : " << static_cast<int>(heldPiece->getPieceType()) << std::endl;
             if(heldPiece!=nullptr){
                 if(heldPiece != previousHeldPiece && previousHeldPiece!=nullptr)
                 {
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                     {
-                        std::cout<< iter->x << " " << iter->y << std::endl;
+                        // std::cout<< iter->x << " inv " << iter->y << std::endl;
                         mcInst->setInvisible(iter->x, iter->y);
                     }
+                    pieceSelectFlag = 0;
                 }
                 possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos());
                 for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                 {
-                    std::cout<< iter->x << " " << iter->y << std::endl;
+                    // std::cout<< iter->x << " vi " << iter->y << std::endl;
                     mcInst->setVisible(iter->x, iter->y);
                 }
                 
@@ -226,6 +228,8 @@ void GameHandler::update(sf::Time deltaTime){
             }
             else // clicked on some blank space. toggle selection
             {
+                // previousHeldPiece = nullptr;
+                pieceSelectFlag = 0;
 
             }
             checkedPiece = true;
@@ -271,6 +275,25 @@ void GameHandler::update(sf::Time deltaTime){
             }
 
 
+        }
+        else
+        {
+            
+            if(pieceSelectFlag == 0)
+            {
+                if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
+                {
+                    previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+                    smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                }
+                // else
+                // {
+                    for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                    {
+                        mcInst->setInvisible(iter->x, iter->y);
+                    }
+                // }
+            }
         }
         isMouseReleased = false;
     }

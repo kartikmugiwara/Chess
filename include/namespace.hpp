@@ -3,7 +3,7 @@
 #include <string>
 #include <SFML/System.hpp>
 namespace TextureID{
-    enum pieceName {Pawn, Bishop, Knight, Rook, Queen, King, TOTAL_PIECES}; 
+    enum pieceName {Pawn, Knight, Bishop, Rook, Queen, King, TOTAL_PIECES}; 
 }
 
 // std::string* vecKey(sf::Vector2i vec){// limited to 26 columncs
