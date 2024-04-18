@@ -101,7 +101,7 @@ class GameHandler{
         bool checkedPiece = false;
         uint8_t pieceSelectFlag=0;
         Piece* heldPiece{nullptr}, *previousHeldPiece{nullptr};
-        std::vector<sf::Vector2i>* possibleSquares;
+        std::vector<sf::Vector2i>* possibleSquares{nullptr};
 
         Piece* currentHeldPiece;
         // Piece pawn;
@@ -217,7 +217,7 @@ void GameHandler::update(sf::Time deltaTime){
                     mcInst->setVisible(iter->x, iter->y);
                 }
                 
-                if(previousHeldPiece == heldPiece && pieceSelectFlag==1)
+                if(previousHeldPiece == heldPiece &&  previousHeldPiece!=nullptr && pieceSelectFlag==1)
                 {
                     pieceSelectFlag = 2;
                 }
@@ -229,7 +229,7 @@ void GameHandler::update(sf::Time deltaTime){
             else // clicked on some blank space. toggle selection
             {
                 // previousHeldPiece = nullptr;
-                pieceSelectFlag = 0;
+                pieceSelectFlag = 1;
 
             }
             checkedPiece = true;
@@ -279,13 +279,14 @@ void GameHandler::update(sf::Time deltaTime){
         else
         {
             
-            if(pieceSelectFlag == 0)
+            if(pieceSelectFlag == 1 && previousHeldPiece!=nullptr)
             {
                 if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
                 {
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
                 }
+                    previousHeldPiece = nullptr;
                 // else
                 // {
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
@@ -293,6 +294,7 @@ void GameHandler::update(sf::Time deltaTime){
                         mcInst->setInvisible(iter->x, iter->y);
                     }
                 // }
+                // possibleSquares->clear();
             }
         }
         isMouseReleased = false;
