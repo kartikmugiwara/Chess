@@ -201,7 +201,9 @@ void GameHandler::update(sf::Time deltaTime){
             heldPiece = smInst->getHeldRef(mousePos);
             // std::cout << "heldpiece : " << static_cast<int>(heldPiece->getPieceType()) << std::endl;
             if(heldPiece!=nullptr){
-                if(heldPiece != previousHeldPiece && previousHeldPiece!=nullptr)
+
+                //invisble current held piece's possible squares to draw new piece's squares
+                if(heldPiece != previousHeldPiece && previousHeldPiece!=nullptr )
                 {
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                     {
@@ -210,21 +212,34 @@ void GameHandler::update(sf::Time deltaTime){
                     }
                     pieceSelectFlag = 0;
                 }
-                possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos());
-                for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                if(previousHeldPiece != nullptr && heldPiece->getplayerID() != previousHeldPiece->getplayerID() && std::find(possibleSquares->begin(), possibleSquares->end(), heldPiece->getPos())!=possibleSquares->end())
                 {
-                    // std::cout<< iter->x << " vi " << iter->y << std::endl;
-                    mcInst->setVisible(iter->x, iter->y);
-                }
-                
-                if(previousHeldPiece == heldPiece &&  previousHeldPiece!=nullptr && pieceSelectFlag==1)
-                {
-                    pieceSelectFlag = 2;
-                }
-                if (pieceSelectFlag==0)
-                {
+                    //kill opposite player goti
+                    std::cout << "Kill goti" << std::endl;
+                    // previousHeldPiece = heldPiece;
+                    heldPiece = nullptr;
                     pieceSelectFlag = 1;
                 }
+                else
+                {
+                    possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), heldPiece);
+                    for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                    {
+                        // std::cout<< iter->x << " vi " << iter->y << std::endl;
+                        mcInst->setVisible(iter->x, iter->y);
+                    }
+                    
+                    if(previousHeldPiece == heldPiece &&  previousHeldPiece!=nullptr && pieceSelectFlag==1)
+                    {
+                        pieceSelectFlag = 2;
+                    }
+                    if (pieceSelectFlag==0)
+                    {
+                        pieceSelectFlag = 1;
+                    }
+                }
+
+
             }
             else // clicked on some blank space. toggle selection
             {
@@ -236,8 +251,8 @@ void GameHandler::update(sf::Time deltaTime){
         }
         if(heldPiece != nullptr) // Also write function to check valid square and single click processing as well
         {
-
-            heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)), 0); //note use of 0, so getpos is not updated here only sprite pos
+             //note use of 0, so getpos is not updated here only sprite pos
+            heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)), 0);
             // heldPiece->getSprite()->setPosition(static_cast<sf::Vector2f>(mousePos)); // For smooth drag movement
         
         }
@@ -278,11 +293,15 @@ void GameHandler::update(sf::Time deltaTime){
         }
         else
         {
-            
+            // click to place somewhere
+            std::cout << "Idhar" << std::endl;
             if(pieceSelectFlag == 1 && previousHeldPiece!=nullptr)
             {
+            
+
                 if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
                 {
+                    std::cout << "Udhar " << previousHeldPiece->getPos().x<< std::endl;
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
                 }

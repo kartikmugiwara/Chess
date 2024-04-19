@@ -4,7 +4,7 @@
 #include <namespace.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
-
+#include <player.hpp>
 
 struct pieceInfo{
     TextureID::pieceName pieceType;
@@ -15,11 +15,12 @@ struct pieceInfo{
 class Piece{
 public:
 
-    Piece(pieceInfo pInfo, uint8_t player=255){
+    Piece(pieceInfo pInfo, Player* playerRef){
         globalPieceID +=1;
         pieceID = globalPieceID;
         pieceType = pInfo.pieceType;
-        playerID = player;
+        playerID = playerRef->getPlayerID();
+        direction = playerRef->getDirection();
         updatePos(pInfo.piecePos);
     }
 
@@ -40,14 +41,18 @@ public:
     void setTexture(sf::Texture&);
     sf::Sprite* getSprite();
     TextureID::pieceName getPieceType();
-
+    uint8_t getDirection();
+    Player* getPlayerRef();
+ 
 private:
 
     static uint16_t globalPieceID;
     TextureID::pieceName pieceType;
     uint8_t playerID = -1;
     uint16_t pieceID;
-
+    uint8_t direction;
+    Player* playerRef;
+    
     uint8_t pulse;
     sf::Vector2i pos;
         //graphic stuff

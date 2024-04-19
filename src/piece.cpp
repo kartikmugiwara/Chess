@@ -1,6 +1,6 @@
 #include <piece.hpp>
 #include <gameconfig.hpp>
-
+#include <player.hpp>
 uint16_t Piece::globalPieceID = 0;
 uint8_t Piece::getHeartbeat(){
     return pulse;
@@ -42,4 +42,12 @@ uint8_t Piece::getplayerID(){
 
 void Piece::setPlayerID(uint8_t player){
     playerID = player; 
+}
+
+uint8_t Piece::getDirection(){
+    return direction;
+}
+
+Player* Piece::getPlayerRef(){
+    return playerRef;
 }

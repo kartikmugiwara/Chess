@@ -3,6 +3,7 @@
 
 #include <gameconfig.hpp>
 #include <piece.hpp>
+#include <player.hpp>
 #include <costume.hpp>
 #include <namespace.hpp>
 #include <vector>
@@ -57,36 +58,26 @@ const std::string pieceLoadFile[]=
     // [TextureID::pieceName::Pawn] = "Pawn.png",
 };
 
-class Player{
-    private:
-        uint8_t playerID;
-        sf::Time pRemTime;
-        sf::Clock pClock;
-        
-    public:
-        Player(uint8_t ID){
-            playerID = ID;
-        }
-        
-        uint8_t getScore();
-        void updateRemTime(sf::Time time);
-        sf::Time getRemTime();
-        uint8_t getPlayerID();
+#define TOTAL_DIR 8
+sf::Vector2i pawnMoves[] = {sf::Vector2i(0,1),
+                         sf::Vector2i(1,1),
+                         sf::Vector2i(1,0),
+                         sf::Vector2i(1,-1),
+                         sf::Vector2i(0,-1),
+                         sf::Vector2i(-1,-1),
+                         sf::Vector2i(-1,0),
+                         sf::Vector2i(-1,1),
+                        };
 
-};
+std::vector<sf::Vector2i> knightMoves = {sf::Vector2i(1,2), sf::Vector2i(1,-2), sf::Vector2i(2,1), sf::Vector2i(2,-1), 
+                                         sf::Vector2i(-1,2), sf::Vector2i(-1,-2), sf::Vector2i(-2,1), sf::Vector2i(-2,-1)};
 
-sf::Time Player::getRemTime(){
-    return pRemTime;
-}
+std::vector<sf::Vector2i> bishopMoves = {sf::Vector2i(1,1), sf::Vector2i(1,-1), sf::Vector2i(-1,-1), sf::Vector2i(-1,1)};
 
-void Player::updateRemTime(sf::Time time){
-    pRemTime += time;
-}
+std::vector<sf::Vector2i> rookMoves =   {sf::Vector2i(1,0), sf::Vector2i(-1,0), sf::Vector2i(0,1), sf::Vector2i(0,-1)};
 
-uint8_t Player::getPlayerID(){
-    return playerID;
-}
-
+std::vector<sf::Vector2i> queenMoves =  {sf::Vector2i(1,1), sf::Vector2i(1,-1), sf::Vector2i(-1,-1), sf::Vector2i(-1,1),
+                                         sf::Vector2i(1,0), sf::Vector2i(-1,0), sf::Vector2i(0,1), sf::Vector2i(0,-1)};
 
 class stateManager{
 
@@ -124,7 +115,7 @@ class stateManager{
         void resetGame();
         void updateBoard(Piece* t_piece, sf::Vector2i t_pos);
         Piece* getHeldRef(sf::Vector2i);
-        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos);
+        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece);
 };
 
 
@@ -141,8 +132,8 @@ stateManager* stateManager::getInstance(){
 
 void stateManager::resetGame(){
 
-    Player* playerA = new Player(1);
-    Player* playerB = new Player(2);
+    Player* playerA = new Player(1 ,0);
+    Player* playerB = new Player(2, 4);
     // TODO : erase worldmap 
     worldMap.clear();
     pieceVec.clear();
@@ -150,11 +141,11 @@ void stateManager::resetGame(){
     for(uint8_t i=1; i<=8 ;i++) //defaultlist size hardcoded . //TODO: Here insert could be problematic. should check if key exists and all.
     {
         sf::Vector2i pos = defaultPieceList1[i-1].piecePos + sf::Vector2i(0,royalOffset);
-        Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos}, playerA->getPlayerID());
+        Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos}, playerA);
         royal->updatePos(pos);
         worldMap.insert({*vecKey(pos), royal} );
         pos = sf::Vector2i(i, pawnOffset);
-        Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos}, playerA->getPlayerID());
+        Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos}, playerA);
         pawn->updatePos(pos);        
         worldMap.insert({*vecKey(pos), pawn} );
         royal->setTexture(pieceCostHandler.getCostume(royal->getPieceType()));
@@ -170,12 +161,11 @@ void stateManager::resetGame(){
     for(uint8_t i=1; i<=8 ;i++) //defaultlist size hardcoded . //TODO: Here insert could be problematic. should check if key exists and all.
     {
         sf::Vector2i pos = defaultPieceList1[i-1].piecePos + sf::Vector2i(0,royalOffset) + sf::Vector2i(0,7);
-        Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos }, playerB->getPlayerID());
-        std::cout << pos.x << pos.y << std::endl;
+        Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos }, playerB);
         royal->updatePos(pos);
         worldMap.insert({*vecKey(pos), royal} );
         pos = sf::Vector2i(i, pawnOffset) + sf::Vector2i(0,5); 
-        Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos }, playerB->getPlayerID());
+        Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos }, playerB);
         pawn->updatePos(pos);        
         worldMap.insert({*vecKey(pos), pawn} );
         royal->setTexture(EvilPieceCostHandler.getCostume(royal->getPieceType()));
@@ -195,6 +185,9 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
         if(iter->second->getPieceID() == t_piece->getPieceID())
         {
             worldMap.erase(iter);
+            std::map<std::string, Piece* >::iterator it = worldMap.find(*vecKey(t_pos));
+            if(it != worldMap.end()) // TODO:  erasing opp piece. Add it to deleted list 
+                worldMap.erase(it);
             worldMap.insert({*vecKey(t_pos), t_piece});
             break;
         }
@@ -213,25 +206,24 @@ Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     return iter == worldMap.end() ? nullptr: iter->second ;
 }
 
-std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos ){
+std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece ){
     //TODO: direction variable incorporation for player 2. Refactor this check afterwards
     possibleSquares.clear();
     switch(t_pieceType){
         case TextureID::pieceName::Pawn: // TODO:: enpassant and shit
         {
-            if(worldMap.find(*vecKey(currPos + sf::Vector2i(0,1))) == worldMap.end()) // nothing in front
-                possibleSquares.push_back(currPos + sf::Vector2i(0,1));
-            if(worldMap.find(*vecKey(currPos + sf::Vector2i(-1,1))) != worldMap.end() && worldMap[*vecKey(currPos + sf::Vector2i(-1,1))]->getplayerID()!= t_playerID)
-                possibleSquares.push_back(currPos + sf::Vector2i(-1,1));
-            if(worldMap.find(*vecKey(currPos + sf::Vector2i(1,1))) != worldMap.end() && worldMap[*vecKey(currPos + sf::Vector2i(1,1))]->getplayerID()!= t_playerID)
-                possibleSquares.push_back(currPos + sf::Vector2i(1,1));
+            if(worldMap.find(*vecKey(currPos + pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
+                possibleSquares.push_back(currPos + pawnMoves[heldPiece->getDirection()]);
+            if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])]->getplayerID()!= t_playerID)
+                possibleSquares.push_back(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR]);
+            if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR])]->getplayerID()!= t_playerID)
+                possibleSquares.push_back(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR]);
         }
         break;    
         case TextureID::pieceName::Knight:
         {
-            std::vector<sf::Vector2i> moves = {sf::Vector2i(1,2), sf::Vector2i(1,-2), sf::Vector2i(2,1), sf::Vector2i(2,-1), 
-                                               sf::Vector2i(-1,2), sf::Vector2i(-1,-2), sf::Vector2i(-2,1), sf::Vector2i(-2,-1)};
-            for(std::vector<sf::Vector2i>::iterator iter = moves.begin();iter!=moves.end();iter++)
+
+            for(std::vector<sf::Vector2i>::iterator iter = knightMoves.begin();iter!=knightMoves.end();iter++)
             {
                 if((currPos.x + iter->x)>0 && (currPos.y + iter->y)>0 && (currPos.y + iter->y)<=BOARD_SIZE && (currPos.x + iter->x)<=BOARD_SIZE)
                 {
@@ -246,25 +238,23 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     }
                 }
             }
-
         }
         break;
         case TextureID::pieceName::Bishop:
         case TextureID::pieceName::Rook:
         case TextureID::pieceName::Queen:
         {
-            std::vector<sf::Vector2i> moves;
+            std::vector<sf::Vector2i>* moves;
             if(t_pieceType == TextureID::pieceName::Bishop)
-                moves = {sf::Vector2i(1,1), sf::Vector2i(1,-1), sf::Vector2i(-1,-1), sf::Vector2i(-1,1)};
+                moves = &bishopMoves;
             else if(t_pieceType == TextureID::pieceName::Rook)
-                moves = {sf::Vector2i(1,0), sf::Vector2i(-1,0), sf::Vector2i(0,1), sf::Vector2i(0,-1)};
+                moves = &rookMoves;
             else if(t_pieceType == TextureID::pieceName::Queen)
-                moves = {sf::Vector2i(1,1), sf::Vector2i(1,-1), sf::Vector2i(-1,-1), sf::Vector2i(-1,1),
-                         sf::Vector2i(1,0), sf::Vector2i(-1,0), sf::Vector2i(0,1), sf::Vector2i(0,-1)   };
+                moves = &queenMoves;
 
             uint8_t sideFinished = 0, dist = 1;
 
-            for(std::vector<sf::Vector2i>::iterator iter = moves.begin();iter!=moves.end();iter++)
+            for(std::vector<sf::Vector2i>::iterator iter = moves->begin();iter!=moves->end();iter++)
             {
                 dist = 1;
                 while(true)
