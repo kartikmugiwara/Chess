@@ -5,13 +5,13 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <player.hpp>
-
+#include <iostream>
 struct pieceInfo{
     TextureID::pieceName pieceType;
     sf::Vector2i piecePos; 
 };
 
-
+class Player;
 class Piece{
 public:
 
@@ -19,8 +19,11 @@ public:
         globalPieceID +=1;
         pieceID = globalPieceID;
         pieceType = pInfo.pieceType;
+        this->playerRef = playerRef;
         playerID = playerRef->getPlayerID();
         direction = playerRef->getDirection();
+        (playerRef->alive).push_back(this);
+        
         updatePos(pInfo.piecePos);
     }
 

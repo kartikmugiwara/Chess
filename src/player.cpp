@@ -15,3 +15,11 @@ uint8_t Player::getPlayerID(){
 uint8_t Player::getDirection(){
     return direction;
 }
+
+uint8_t Player::getScore(){
+    return score;
+}
+
+void Player::setScore(uint8_t newScore){
+    score = newScore;
+}

@@ -121,6 +121,14 @@ void GameHandler::render(){
 
     }
 
+    for(std::vector<Piece*>::iterator iter = (smInst->deadPiece).begin();iter!=(smInst->deadPiece).end();iter++)
+    {
+        mainWindow.draw(*((*iter)->getSprite()));
+        // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
+        // std::cout << "abc" <<static_cast<int>((iter->second)->getPos().x)<< " " << static_cast<int>((iter->second)->getPos().y) << std::endl;        
+
+    }
+
     mcInst->renderAll(mainWindow);
 
     // std::cout << "abc" << std::endl;
@@ -185,15 +193,7 @@ void GameHandler::update(sf::Time deltaTime){
     testBall.move(movement * deltaTime.asSeconds());
     if(isMousePressed)
     {
-        if( mousePos.x < 0)
-            sf::Mouse::setPosition(sf::Vector2i(0,mousePos.y), mainWindow);
-        if( mousePos.y < 0)
-            sf::Mouse::setPosition(sf::Vector2i(mousePos.x,0), mainWindow);
-        if( mousePos.x > WINDOW_SIZE)
-            sf::Mouse::setPosition(sf::Vector2i(WINDOW_SIZE, mousePos.y ), mainWindow);
-        if( mousePos.y > WINDOW_SIZE)
-            sf::Mouse::setPosition(sf::Vector2i(mousePos.x, WINDOW_SIZE), mainWindow);
-
+        // BOUND Cursor
         mousePos = sf::Mouse::getPosition(mainWindow);
 
         if(!checkedPiece){
@@ -252,6 +252,15 @@ void GameHandler::update(sf::Time deltaTime){
         if(heldPiece != nullptr) // Also write function to check valid square and single click processing as well
         {
              //note use of 0, so getpos is not updated here only sprite pos
+            if( mousePos.x < 0)
+                sf::Mouse::setPosition(sf::Vector2i(0,mousePos.y), mainWindow);
+            if( mousePos.y < 0)
+                sf::Mouse::setPosition(sf::Vector2i(mousePos.x,0), mainWindow);
+            if( mousePos.x > WINDOW_BIND_Y)
+                sf::Mouse::setPosition(sf::Vector2i(WINDOW_BIND_Y, mousePos.y ), mainWindow);
+            if( mousePos.y > WINDOW_BIND_X)
+                sf::Mouse::setPosition(sf::Vector2i(mousePos.x, WINDOW_BIND_X), mainWindow);
+                
             heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)), 0);
             // heldPiece->getSprite()->setPosition(static_cast<sf::Vector2f>(mousePos)); // For smooth drag movement
         
@@ -294,14 +303,10 @@ void GameHandler::update(sf::Time deltaTime){
         else
         {
             // click to place somewhere
-            std::cout << "Idhar" << std::endl;
             if(pieceSelectFlag == 1 && previousHeldPiece!=nullptr)
             {
-            
-
                 if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
                 {
-                    std::cout << "Udhar " << previousHeldPiece->getPos().x<< std::endl;
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
                 }
@@ -364,7 +369,7 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
 
 }
 
-GameHandler::GameHandler(): mainWindow(sf::VideoMode(8*(PIECE_SIZE + 2*PIECE_PAD), 8*(PIECE_SIZE + 2*PIECE_PAD)), "We have Chess.com at home", 5U)
+GameHandler::GameHandler(): mainWindow(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_Y), "We have Chess.com at home", 5U)
                                 ,masterClock()
                                 ,testBall(10.0f)
 {
