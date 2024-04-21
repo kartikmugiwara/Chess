@@ -25,7 +25,7 @@ std::string* vecKey(sf::Vector2i vec){// limited to 26 columncs
 
 sf::Vector2i deathPosition1 = sf::Vector2i(BOARD_SIZE*(PIECE_SIZE + 2*PIECE_PAD) + 2*PIECE_PAD, (PIECE_SIZE + 2*PIECE_PAD) + 2*PIECE_PAD);
 sf::Vector2i deathPosition2 = sf::Vector2i(BOARD_SIZE*(PIECE_SIZE + 2*PIECE_PAD) + 2*PIECE_PAD, (BOARD_SIZE-1)*(PIECE_SIZE + 2*PIECE_PAD));
-
+static bool enemySpotted, pawnKill;
 
 // std::map<TextureID::pieceName, std::vector<sf::Vector2i> > genericMoves={
 //     {TextureID::pieceName::Pawn, {sf::Vector2i(), }},
@@ -63,7 +63,7 @@ const std::string pieceLoadFile[]=
 };
 
 #define TOTAL_DIR 8
-sf::Vector2i pawnMoves[] = {sf::Vector2i(0,1),
+std::vector<sf::Vector2i> pawnMoves = {sf::Vector2i(0,1),
                          sf::Vector2i(1,1),
                          sf::Vector2i(1,0),
                          sf::Vector2i(1,-1),
@@ -137,7 +137,7 @@ class stateManager{
 
 
         Piece* getHeldRef(sf::Vector2i);
-        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece);
+        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece=nullptr);
 };
 
 
@@ -159,16 +159,16 @@ void stateManager::resetGame(){
     playerList.push_back(playerA);
     playerList.push_back(playerB);
     playerA->deathPos = deathPosition1;
-    playerA->scoreText.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*4*PIECE_PAD); // score string position
+    playerA->scoreText.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*5*PIECE_PAD); // score string position
     playerA->scoreText.setString("Player"+std::to_string(playerA->getPlayerID())+" : "+std::to_string(0));
     playerA->timeText.setPosition(playerA->deathPos.x + 3*PIECE_PAD, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
     playerA->scoreRect.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
     
     playerB->deathPos = deathPosition2;
-    playerB->scoreText.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*4*PIECE_PAD);
+    playerB->scoreText.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
     playerB->scoreText.setString("Player"+std::to_string(playerB->getPlayerID())+" : "+std::to_string(0));
-    playerB->timeText.setPosition(playerB->deathPos.x + 3*PIECE_PAD, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
-    playerB->scoreRect.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
+    playerB->timeText.setPosition(playerB->deathPos.x + 3*PIECE_PAD, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*18*PIECE_PAD);
+    playerB->scoreRect.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*18*PIECE_PAD);
     playerA->pClock.restart();
     playerB->pClock.restart();
 
@@ -266,7 +266,7 @@ void stateManager::updateHell(Player* playerRef){
         if((*i)->getPieceType() == TextureID::pieceName::Pawn)
         {
             pawnSadasyaPosX += 2*PIECE_PAD;
-            (*i)->getSprite()->setPosition(pawnSadasyaPosX + playerRef->deathPos.x , playerRef->deathPos.y +  5*PIECE_PAD *(pawnMoves[playerRef->getDirection()].y));
+            (*i)->getSprite()->setPosition(pawnSadasyaPosX + playerRef->deathPos.x , playerRef->deathPos.y -  5*PIECE_PAD *(pawnMoves[playerRef->getDirection()].y));
         }
         else
         {
@@ -333,16 +333,26 @@ Piece* stateManager::getHeldRef(sf::Vector2i mouse){
 
 std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece ){
     //TODO: direction variable incorporation for player 2. Refactor this check afterwards
+    // heldpiece needed only to get pawn direcction
     possibleSquares.clear();
+    enemySpotted = false;
     switch(t_pieceType){
         case TextureID::pieceName::Pawn: // TODO:: enpassant and shit
         {
             if(worldMap.find(*vecKey(currPos + pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
+            {
                 possibleSquares.push_back(currPos + pawnMoves[heldPiece->getDirection()]);
+            }    
             if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])]->getplayerID()!= t_playerID)
+            {
                 possibleSquares.push_back(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR]);
+                pawnKill =true;
+            }    
             if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR])]->getplayerID()!= t_playerID)
+            {
                 possibleSquares.push_back(currPos + pawnMoves[(heldPiece->getDirection()+ 1)%TOTAL_DIR]);
+                pawnKill = true;
+            }
         }
         break;    
         case TextureID::pieceName::Knight:
@@ -355,7 +365,14 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     if(worldMap.find(*vecKey(currPos + *iter))!=worldMap.end())
                     {
                         if(worldMap[*vecKey(currPos + *iter)]->getplayerID()!= t_playerID )
+                        {
                             possibleSquares.push_back(currPos + *iter);
+                            if(worldMap[*vecKey(currPos + *iter)]->getPieceType() == TextureID::pieceName::Knight)
+                            {
+                                // std::cout << "knight spotted " << *vecKey(currPos + *iter) <<std::endl;
+                                enemySpotted = true;
+                            }
+                        }
                     }
                     else
                     {
@@ -394,6 +411,13 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                             if(worldMap[*vecKey(currPos + newpos)]->getplayerID()!= t_playerID )//opponent piece
                             {
                                 possibleSquares.push_back(currPos + newpos);
+                                if(worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Queen
+                                || worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Bishop
+                                || worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Rook ){
+                                    enemySpotted = true;
+                                // std::cout << "piece spotted " << *vecKey(currPos + *iter) << static_cast<int>(t_pieceType) <<std::endl;
+
+                                }
                             }
 
                             break;
@@ -416,6 +440,99 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
         case TextureID::pieceName::King:
         {
                 // for checking checks on king. Should I calculate reverse like a Queen and Bishop ?? Mind Blown
+                // check separately for pawn because pawnmoves are fucking weird here.
+                // TODO: this algo can be a lot better for pawn check
+            std::vector<sf::Vector2i> tempKingList;
+            sf::Vector2i newPos, newPos2;
+            for(uint8_t i =0; i < pawnMoves.size(); i++){
+                newPos = currPos + pawnMoves[i];
+                if(((newPos.x)>0 && (newPos.y)>0 && (newPos.x)<=BOARD_SIZE && (newPos.y)<=BOARD_SIZE))
+                {
+                    bool pawnFound = false;
+                    for(uint8_t j =0; j < pawnMoves.size(); j++){
+                        newPos2 = newPos + pawnMoves[j];
+                        if(((newPos2.x)>0 && (newPos2.y)>0 && (newPos2.x)<=BOARD_SIZE && (newPos2.y)<=BOARD_SIZE))
+                        {
+                            if (worldMap.find(*vecKey(newPos2))!=worldMap.end())
+                            {
+                                if(worldMap[*vecKey(newPos2)]->getPieceType()==TextureID::pieceName::Pawn && worldMap[*vecKey(newPos2)]->getplayerID() != t_playerID){
+                                    // possibleSquaresList(worldMap[*vecKey(newPos2)]->getplayerID(),TextureID::pieceName::Pawn, newPos2, worldMap[*vecKey(newPos2)]);
+                                    // TODO how to determine if thing is pinned
+                                    if((newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])
+                                    || (newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ 1)%TOTAL_DIR]) ){
+                                        pawnFound = true;
+                                         break;
+                                    }
+                                    // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares.begin(); iter!=possibleSquares.end();iter++ )
+                                    // {
+                                    //     std::cout<< "pawn possible" <<*vecKey(*iter) << "newpos "<< newPos.x << newPos.y << "newpoas2" << newPos2.x << newPos2.y << std::endl;
+                                    //     // mcInst->setInvisible(iter->x, iter->y);
+                                    // }
+                                    // if(std::find(possibleSquares.begin(), possibleSquares.end(), newPos) != possibleSquares.end()){
+                                    //     if((newPos2.x == newPos.y) || (newPos2.y == newPos.y)  )
+                                    //     {
+                                    //         continue;
+                                    //     }else
+                                    //     {
+                                    //         pawnFound = true;
+                                    //         break;
+                                    //     }
+                                    // }
+                                }
+                            }
+                        }
+                    }
+
+                    if(pawnFound){
+                        continue;
+                    }
+                    if (worldMap.find(*vecKey(newPos))!=worldMap.end()) 
+                    {
+                        if(worldMap[*vecKey(newPos)]->getplayerID() == t_playerID){// our own piece
+                            continue;
+                        }
+                        if(worldMap[*vecKey(newPos)]->getPieceType() == TextureID::pieceName::King){ //opponent king{
+                            continue;
+                        }
+                    }
+                    
+                    // std::cout << "newpos0" << newPos.x << newPos.y << std::endl;
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Queen, newPos);
+                    if(enemySpotted)
+                    {
+                    // std::cout << "newpos1" << newPos.x << newPos.y << std::endl;
+                        continue;
+
+                    }
+                    
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Knight, newPos);
+                    if(!enemySpotted)
+                    {
+                        tempKingList.push_back(newPos);
+                    // std::cout << "newpos2" << newPos.x << newPos.y << std::endl;
+
+                    }
+                    else
+                    {
+                    // std::cout << "newpos3" << newPos.x << newPos.y << std::endl;
+                        
+                    }
+                    
+                }
+            }
+            possibleSquares.clear();
+            std::cout << "possq len" << static_cast<int>(possibleSquares.size()) <<std::endl;
+            // for(std::vector<sf::Vector2i>::iterator iter = tempKingList.begin(); iter!=tempKingList.end();iter++ )
+            // {
+            //     std::cout<< "ll " << *vecKey(*iter) << std::endl;
+            // }
+            possibleSquares.assign(tempKingList.begin(), tempKingList.end());
+            // std::copy(tempKingList.begin(), tempKingList.end()+1, possibleSquares.begin());
+            // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares.begin(); iter!=possibleSquares.end();iter++ )
+            // {
+            //     std::cout<< *vecKey(*iter) << std::endl;
+            //     // mcInst->setInvisible(iter->x, iter->y);
+            // }
         }
         break;
         default:

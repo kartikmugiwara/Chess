@@ -6,13 +6,17 @@ Developer Notes:
 5. Very odd ways of initialzation at many places. Scalability is a question.
 6. It would be intereseting to see you implement flip board mf.
 7. scores are being handled by player class but should be statemanager's job.
+8. how to determine if piece is pinned.
+
+Done:
+Turnwise Play
+Add Score
+Add timer
+
 
 TODO: 
 
-Turnwise Play
-Add Score
-Add checks, checkmate, winning criteria: Check, Checkmate, Pawn enpassant, Pawn two step, draw/win/
-Add timer
+Add checks, checkmate, winning criteria, Pawn enpassant, Pawn two step, draw/win/
 Add Undo/Redo
 Add Arrows
 Add Premoves
@@ -23,3 +27,5 @@ Add Keyboard
 Flip Board
 User customization
 Variants
+
+ENd Goal: Pokemon style game with variants as quests and levels. arrow vortex, premove square red where enemies spawn. cuphead style board where opponents are GM with special preferences. make it absurd.
