@@ -94,12 +94,14 @@ class stateManager{
         
         sf::Time gameTime;
         uint8_t turn;
-        std::vector<Player> playerList; 
+        sf::Font uiFont;
+        
         
 
         // void initPieces(std::vector<Player>::iterator playerIt, uint8_t orient, sf::Vector2i pos);
 
-        stateManager(){
+        stateManager()
+        {
             //Load texture of all characters. This is bad for adventure game
             // for 
             std::cout << "Loaded all costumes" << std::endl;
@@ -109,19 +111,29 @@ class stateManager{
                 EvilPieceCostHandler.loadCostume(static_cast<TextureID::pieceName>(i),"Evil" + pieceLoadFile[i]);
             }
 
+            uiFont.loadFromFile("assets/Roboto.ttf");
+            playerTurn = 0;
+            // playerList.push_back(playerA);
+            // playerList.push_back(playerB);
+
+
         }
     public:
         Player* playerA;
         Player* playerB;
+        uint8_t playerTurn;
         std::map<std::string, Piece* > worldMap;
         std::vector<Piece*> deadPiece;
         std::vector<sf::Vector2i> possibleSquares; // TODO: this is primitive, without taking many things into account
+        std::vector<Player*> playerList; 
         
         static stateManager* getInstance();
         void resetGame();
         void updateBoard(Piece* t_piece, sf::Vector2i t_pos);
         void updateHell(Player* playerRef);
         void calculateScore(Player*);
+        void updateTurn();
+        Player* whoseTurn();
 
 
         Piece* getHeldRef(sf::Vector2i);
@@ -142,10 +154,25 @@ stateManager* stateManager::getInstance(){
 
 void stateManager::resetGame(){
 
-    playerA = new Player(1 ,0);
-    playerB = new Player(2, 4);
-    playerA->deathPos = deathPosition2;
-    playerB->deathPos = deathPosition1;
+    playerA = new Player(1 ,0, uiFont);
+    playerB = new Player(2, 4, uiFont);
+    playerList.push_back(playerA);
+    playerList.push_back(playerB);
+    playerA->deathPos = deathPosition1;
+    playerA->scoreText.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*4*PIECE_PAD); // score string position
+    playerA->scoreText.setString("Player"+std::to_string(playerA->getPlayerID())+" : "+std::to_string(0));
+    playerA->timeText.setPosition(playerA->deathPos.x + 3*PIECE_PAD, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
+    playerA->scoreRect.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
+    
+    playerB->deathPos = deathPosition2;
+    playerB->scoreText.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*4*PIECE_PAD);
+    playerB->scoreText.setString("Player"+std::to_string(playerB->getPlayerID())+" : "+std::to_string(0));
+    playerB->timeText.setPosition(playerB->deathPos.x + 3*PIECE_PAD, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
+    playerB->scoreRect.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
+    playerA->pClock.restart();
+    playerB->pClock.restart();
+
+
 
     // TODO : erase worldmap 
     worldMap.clear();
@@ -248,27 +275,52 @@ void stateManager::updateHell(Player* playerRef){
         }
 
     }
+    calculateScore(playerRef);
 }
 
 void stateManager::calculateScore(Player* playerRef)
 {
-    // for(std::vector<Piece*>::iterator i = (playerRef->dead).begin();i != (playerRef->dead).end();i++)
-    // {
-    //     // (*i)->updatePos(sf::Vector2i(nayaSadasyaPos.x + (playerRef->deathPos.x), nayaSadasyaPos.y + (playerRef->deathPos.y) ));
-    //     if((*i)->getPieceType() == TextureID::pieceName::Pawn)
-    //     {
-    //         pawnSadasyaPosX += 2*PIECE_PAD;
-    //         (*i)->getSprite()->setPosition(pawnSadasyaPosX + playerRef->deathPos.x , playerRef->deathPos.y +  5*PIECE_PAD *(pawnMoves[playerRef->getDirection()].y));
-    //     }
-    //     else
-    //     {
-    //         royalSadasyaPosX += 2*PIECE_PAD;
-    //         (*i)->getSprite()->setPosition(royalSadasyaPosX + playerRef->deathPos.x , playerRef->deathPos.y);
-    //     }
+    uint8_t score = 0; //maxx score possible 8 + 4*3 + 2*5 + 7 + King = King + 37
+    for(std::vector<Piece*>::iterator i = (playerRef->alive).begin();i != (playerRef->alive).end();i++)
+    {
+        // (*i)->updatePos(sf::Vector2i(nayaSadasyaPos.x + (playerRef->deathPos.x), nayaSadasyaPos.y + (playerRef->deathPos.y) ));
+        switch((*i)->getPieceType()){
+            case TextureID::pieceName::Pawn:
+                score+=1;
+            break;
+            case TextureID::pieceName::Knight:
+            case TextureID::pieceName::Bishop:
+                score+=3;
+            break;
+            case TextureID::pieceName::Rook:
+                score+=5;
+            break;
+            case TextureID::pieceName::Queen:
+                score+=7;
+            break;
+            // case TextureID::pieceName::Pawn:
 
-    // }
+            // break;  
+
+        }
+
+    }
+    playerRef->setScore(37 - score);
+    std::string str_score = std::to_string(37-score);
+    if (str_score.size()==1)
+        str_score = '0' + str_score;
+    playerRef->scoreText.setString("Player"+std::to_string(playerRef->getPlayerID())+" : "+ str_score);
 }
 
+void stateManager::updateTurn(){
+    playerTurn = (playerTurn + 1) % playerList.size();
+    // std::cout << "playerturn " << static_cast<int>(playerTurn) << std::endl; 
+    playerList[playerTurn]->pClock.restart();
+}
+
+Player* stateManager::whoseTurn(){
+    return playerList[playerTurn];
+}
 
 Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     sf::Vector2i m;

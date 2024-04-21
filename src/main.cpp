@@ -129,6 +129,17 @@ void GameHandler::render(){
 
     }
 
+    for(std::vector<Player*>::iterator i = smInst->playerList.begin(); i != smInst->playerList.end();i++){
+        if((*i)->getPlayerID() == smInst->whoseTurn()->getPlayerID()){
+            (*i)->scoreRect.setFillColor(sf::Color(255,255,255,100));
+        }else{
+            (*i)->scoreRect.setFillColor(sf::Color(255,255,255,30));
+        }
+        mainWindow.draw((*i)->scoreRect);
+        mainWindow.draw((*i)->scoreText);
+        mainWindow.draw((*i)->timeText);
+    }
+
     mcInst->renderAll(mainWindow);
 
     // std::cout << "abc" << std::endl;
@@ -189,7 +200,8 @@ void GameHandler::update(sf::Time deltaTime){
         movement.y += DELTA;
     if(direction & 0x08)
         movement.x += DELTA;
-    
+        
+    smInst->whoseTurn()->updateRemTime();
     testBall.move(movement * deltaTime.asSeconds());
     if(isMousePressed)
     {
@@ -199,6 +211,9 @@ void GameHandler::update(sf::Time deltaTime){
         if(!checkedPiece){
             previousHeldPiece = heldPiece;
             heldPiece = smInst->getHeldRef(mousePos);
+            if(heldPiece!=nullptr && smInst->whoseTurn()->getPlayerID() != heldPiece->getplayerID()) // clicked on opponent piece
+                heldPiece = nullptr;
+            // smInst->whoseTurn()->getPlayerID();
             // std::cout << "heldpiece : " << static_cast<int>(heldPiece->getPieceType()) << std::endl;
             if(heldPiece!=nullptr){
 
@@ -215,7 +230,7 @@ void GameHandler::update(sf::Time deltaTime){
                 if(previousHeldPiece != nullptr && heldPiece->getplayerID() != previousHeldPiece->getplayerID() && std::find(possibleSquares->begin(), possibleSquares->end(), heldPiece->getPos())!=possibleSquares->end())
                 {
                     //kill opposite player goti
-                    std::cout << "Kill goti" << std::endl;
+                    // std::cout << "Kill goti" << std::endl;
                     // previousHeldPiece = heldPiece;
                     heldPiece = nullptr;
                     pieceSelectFlag = 1;
@@ -287,6 +302,7 @@ void GameHandler::update(sf::Time deltaTime){
             {
                 heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                 smInst->updateBoard(heldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                smInst->updateTurn();
             }
             else{
                 if(pieceSelectFlag!=0) // pakad ke galat jagah rakho to red dot delete mat karna
@@ -295,6 +311,8 @@ void GameHandler::update(sf::Time deltaTime){
                         mcInst->setVisible(iter->x, iter->y);
                     }
                 heldPiece->updatePos(heldPiece->getPos());
+                // smInst->updateTurn();
+
 
             }
 
@@ -309,6 +327,8 @@ void GameHandler::update(sf::Time deltaTime){
                 {
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                    smInst->updateTurn();
+
                 }
                     previousHeldPiece = nullptr;
                 // else

@@ -40,7 +40,7 @@ public:
     void setPlayerID(uint8_t player);
 
     sf::Time getRemTime();
-    void updateRemTime(sf::Time time);
+    void updateRemTime();
     void setTexture(sf::Texture&);
     sf::Sprite* getSprite();
     TextureID::pieceName getPieceType();
