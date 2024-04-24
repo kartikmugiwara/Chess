@@ -7,7 +7,9 @@ Developer Notes:
 6. It would be intereseting to see you implement flip board mf.
 7. scores are being handled by player class but should be statemanager's job.
 8. how to determine if piece is pinned.
-
+9. mouese pressed and key pressed simultatneously handle this afterwwards.
+ count move no. and dont update board if not on latest move
+ 
 Done:
 Turnwise Play
 Add Score
@@ -28,4 +30,4 @@ Flip Board
 User customization
 Variants
 
-ENd Goal: Pokemon style game with variants as quests and levels. arrow vortex, premove square red where enemies spawn. cuphead style board where opponents are GM with special preferences. make it absurd.
+END Goal: Pokemon style game with variants as quests and levels. arrow vortex, premove square red where enemies spawn. cuphead style board where opponents are GM with special preferences. make it absurd.

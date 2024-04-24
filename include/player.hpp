@@ -15,6 +15,7 @@ class Player{
         uint8_t direction;
         uint8_t score;
         uint8_t timeM, timeS;
+        sf::Vector2i kingPos;
     public:
         Player(uint8_t ID, uint8_t dir, sf::Font& f){
             playerID = ID;
@@ -51,6 +52,8 @@ class Player{
         uint8_t getPlayerID();
         void setScore(uint8_t newScore);
         void updateRemTime();
+        sf::Vector2i getKingPos();
+        void setKingPos(sf::Vector2i newPos);
 
 
 };

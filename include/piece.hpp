@@ -23,7 +23,10 @@ public:
         playerID = playerRef->getPlayerID();
         direction = playerRef->getDirection();
         (playerRef->alive).push_back(this);
-        
+        if(pieceType == TextureID::pieceName::King)
+        {   
+            playerRef->setKingPos(pInfo.piecePos);
+        }
         updatePos(pInfo.piecePos);
     }
 

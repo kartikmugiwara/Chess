@@ -237,7 +237,7 @@ void GameHandler::update(sf::Time deltaTime){
                 }
                 else
                 {
-                    possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), heldPiece);
+                    possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), smInst->smPossibleSquares, heldPiece);
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                     {
                         // std::cout<< iter->x << " vi " << iter->y << std::endl;
@@ -283,6 +283,7 @@ void GameHandler::update(sf::Time deltaTime){
         // std::cout << "Button now : "<< mousePos.x << " " << mousePos.y << std::endl;
     }
 
+// piece final movement happens here only, so check for checks and mate here
     if(isMouseReleased){
         // if()// TODO check if position is valid
         if(heldPiece != nullptr)
@@ -297,11 +298,26 @@ void GameHandler::update(sf::Time deltaTime){
                 }
             }
 
-            // update only if kept on valid square
+            // update only if kept on valid square. Piece pos actual update;
             if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
             {
+                pieceState* currMove = new pieceState{.piece = heldPiece,
+                                                     .wasPos = heldPiece->getPos(),
+                                                     .isPos = sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD),
+                                                                           1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)),
+                                                     .killed = false,
+                                                    //  .wasKilledAtMove = 0,
+                                                    };
                 heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+                
+                size_t deadLength = smInst->deadPiece.size();
                 smInst->updateBoard(heldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                if(deadLength != smInst->deadPiece.size()){
+                    currMove->killed = true;
+                }
+
+                smInst->movesHist.push_back(*currMove);
+                smInst->lastMove = smInst->movesHist.end()-1;
                 smInst->updateTurn();
             }
             else{
@@ -320,13 +336,32 @@ void GameHandler::update(sf::Time deltaTime){
         }
         else
         {
-            // click to place somewhere
+            // click to place somewhere. Actual update 
             if(pieceSelectFlag == 1 && previousHeldPiece!=nullptr)
             {
                 if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
                 {
+                    // previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+                    // smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                    // smInst->updateTurn();
+
+                    pieceState* currMove = new pieceState{.piece = previousHeldPiece,
+                                                     .wasPos = previousHeldPiece->getPos(),
+                                                     .isPos = sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD),
+                                                                           1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)),
+                                                     .killed = false,
+                                                    //  .wasKilledAtMove = 0,
+                                                    };
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
+                    
+                    size_t deadLength = smInst->deadPiece.size();
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                    if(deadLength != smInst->deadPiece.size()){
+                        currMove->killed = true;
+                    }
+
+                    smInst->movesHist.push_back(*currMove);
+                    smInst->lastMove = smInst->movesHist.end()-1;
                     smInst->updateTurn();
 
                 }
@@ -365,24 +400,42 @@ void GameHandler::run(){
 }
 
 void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
-
     switch(key)
     {
         case sf::Keyboard::W:
-            direction = (state ? (direction | 0x01) : (direction & ~0x01));
+            // direction = (state ? (direction | 0x01) : (direction & ~0x01));
         break;
 
         case sf::Keyboard::A:
-            direction = (state ? (direction | 0x02) : (direction & ~0x02));
+            // direction = (state ? (direction | 0x02) : (direction & ~0x02));
         break;
 
         case sf::Keyboard::S:
-            direction = (state ? (direction | 0x04) : (direction & ~0x04));
+            // direction = (state ? (direction | 0x04) : (direction & ~0x04));
 
         break;
 
         case sf::Keyboard::D:
-            direction = (state ? (direction | 0x08) : (direction & ~0x08));
+            // direction = (state ? (direction | 0x08) : (direction & ~0x08));
+        break;
+        case sf::Keyboard::Left:
+            if(!state)
+            {
+                smInst->stepPast();
+            std::cout << "left key" << std::endl;
+
+            }
+            // direction = (state ? (direction | 0x08) : (direction & ~0x08));
+        break;
+        case sf::Keyboard::Right:
+        if(!state)
+        {
+            smInst->stepFuture();
+            // smInst->stepPast();
+        std::cout << "right key" << std::endl;
+
+        }
+            // direction = (state ? (direction | 0x08) : (direction & ~0x08));
         break;
     }
     // std::cout << std::hex << (int)direction << std::endl;

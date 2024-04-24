@@ -83,6 +83,16 @@ std::vector<sf::Vector2i> rookMoves =   {sf::Vector2i(1,0), sf::Vector2i(-1,0), 
 std::vector<sf::Vector2i> queenMoves =  {sf::Vector2i(1,1), sf::Vector2i(1,-1), sf::Vector2i(-1,-1), sf::Vector2i(-1,1),
                                          sf::Vector2i(1,0), sf::Vector2i(-1,0), sf::Vector2i(0,1), sf::Vector2i(0,-1)};
 
+struct pieceState{
+    Piece* piece;
+    sf::Vector2i wasPos;
+    sf::Vector2i isPos;
+    bool killed;
+    // uint16_t wasKilledAtMove;
+    // std::map<std::string, Piece* >::iterator worldIter;
+};
+
+typedef struct pieceState pieceState;
 class stateManager{
 
     private:
@@ -96,8 +106,6 @@ class stateManager{
         uint8_t turn;
         sf::Font uiFont;
         
-        
-
         // void initPieces(std::vector<Player>::iterator playerIt, uint8_t orient, sf::Vector2i pos);
 
         stateManager()
@@ -113,6 +121,8 @@ class stateManager{
 
             uiFont.loadFromFile("assets/Roboto.ttf");
             playerTurn = 0;
+            lastMove = movesHist.begin();
+            lastDeadMove = deadHist.begin();
             // playerList.push_back(playerA);
             // playerList.push_back(playerB);
 
@@ -122,24 +132,80 @@ class stateManager{
         Player* playerA;
         Player* playerB;
         uint8_t playerTurn;
-        std::map<std::string, Piece* > worldMap;
+        std::map<std::string, Piece* > worldMap, shadowMap;
         std::vector<Piece*> deadPiece;
-        std::vector<sf::Vector2i> possibleSquares; // TODO: this is primitive, without taking many things into account
+        std::vector<sf::Vector2i> smPossibleSquares; // TODO: this is primitive, without taking many things into account
         std::vector<Player*> playerList; 
-        
+        std::vector<pieceState> movesHist{};
+        std::vector<pieceState> deadHist{};
+        std::vector<pieceState>::iterator lastMove, lastDeadMove;
+        uint16_t totalMoves;
+        uint16_t currMove;
+
         static stateManager* getInstance();
         void resetGame();
         void updateBoard(Piece* t_piece, sf::Vector2i t_pos);
         void updateHell(Player* playerRef);
         void calculateScore(Player*);
-        void updateTurn();
+        void updateTurn(bool future = 1);
         Player* whoseTurn();
-
+        bool underCheck(Player* playerRef);
+        void stepFuture();
+        void stepPast();
 
         Piece* getHeldRef(sf::Vector2i);
-        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece=nullptr);
+        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece=nullptr);
+        bool underCheck(Player* playerRef, sf::Vector2i piecePos );
+
 };
 
+void stateManager::stepFuture(){
+    if(lastMove == movesHist.end() || lastMove == movesHist.end()-1)
+        return;
+
+    ++lastMove;
+    lastMove->piece->updatePos(lastMove->isPos);
+    worldMap.erase(worldMap.find(*vecKey(lastMove->wasPos)));
+
+    if(lastMove->killed)
+    {
+        ++lastDeadMove;
+        lastDeadMove->piece->getPlayerRef()->dead.push_back(lastDeadMove->piece);
+        deadPiece.push_back(lastDeadMove->piece);
+        lastDeadMove->piece->getSprite()->scale(0.3, 0.3);
+        lastDeadMove->piece->getPlayerRef()->alive.erase(
+                            std::find(lastDeadMove->piece->getPlayerRef()->alive.begin(), 
+                            lastDeadMove->piece->getPlayerRef()->alive.end(),
+                            lastDeadMove->piece));
+        worldMap.erase(worldMap.find(*vecKey(lastMove->isPos)));
+        updateHell(lastDeadMove->piece->getPlayerRef());
+    }
+    worldMap.insert({*vecKey(lastMove->isPos), lastMove->piece});
+    updateTurn(1);
+}
+
+void stateManager::stepPast(){
+    if(lastMove == movesHist.begin())
+        return;
+
+    lastMove->piece->updatePos(lastMove->wasPos);
+    worldMap.erase(worldMap.find(*vecKey(lastMove->isPos)));
+    worldMap.insert({*vecKey(lastMove->wasPos), lastMove->piece});
+
+    if(lastMove->killed) // revival on undo
+    {
+        Piece* revivedPiece = *(lastDeadMove->piece->getPlayerRef()->dead.end() - 1) ;
+        lastDeadMove->piece->getPlayerRef()->dead.pop_back();
+        deadPiece.pop_back(); // updateshell drawing
+        revivedPiece->getSprite()->scale(1.0, 1.0);
+        revivedPiece->getPlayerRef()->alive.push_back(revivedPiece);
+        revivedPiece->updatePos(lastMove->isPos);
+        worldMap.insert({*vecKey(lastMove->isPos), revivedPiece});
+        --lastDeadMove;
+    }
+    --lastMove;
+    updateTurn(0);
+}
 
 stateManager* stateManager::getInstance(){
     if(stateManager::instance_ptr == nullptr)
@@ -219,6 +285,7 @@ void stateManager::resetGame(){
     }
 }
 
+//instead of shadowmap. use stack for undo
 void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
     for(std::map<std::string, Piece* >::iterator iter = worldMap.begin();iter!=worldMap.end();iter++)
     {
@@ -230,6 +297,22 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
             {
                 Player* playerRef = it->second->getPlayerRef();
                 std::vector<Piece*>::iterator killedPiece = std::find(playerRef->alive.begin(), playerRef->alive.end(), it->second);
+                // worldMap.erase(it);
+                // worldMap.insert({*vecKey(t_pos), t_piece});
+
+                // if(underCheck(t_piece->getPlayerRef(), t_piece->getPlayerRef()->getKingPos()))
+                // {
+                //     worldMap = shadowMap;
+                //     return;
+                // }
+                pieceState* deadMove = new pieceState{*killedPiece,
+                                                     (*killedPiece)->getPos(),
+                                                     sf::Vector2i(0,0),
+                                                     true,
+                                                    //  .wasKilledAtMove = 0,
+                                                    };
+                deadHist.push_back(*deadMove);
+                lastDeadMove = deadHist.end() - 1;
                 if(killedPiece == playerRef->alive.end() )
                     std::cout<< "Deleting player logic problem" << std::endl;
                 else{
@@ -245,9 +328,12 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
                 //     std::cout<< "dead" << (*(*i)).getPieceID() << std::endl;
 
                 }
+                    // worldMap.erase(it);
                  worldMap.erase(it);
             }
             worldMap.insert({*vecKey(t_pos), t_piece});
+            totalMoves++;
+            currMove = totalMoves;
             break;
         }
         // mainWindow.draw(*((iter->second)->getSprite()));
@@ -312,8 +398,11 @@ void stateManager::calculateScore(Player* playerRef)
     playerRef->scoreText.setString("Player"+std::to_string(playerRef->getPlayerID())+" : "+ str_score);
 }
 
-void stateManager::updateTurn(){
+void stateManager::updateTurn(bool future){
+    if(future)
     playerTurn = (playerTurn + 1) % playerList.size();
+    else
+        playerTurn = (playerTurn + (playerList.size()-1)) % playerList.size();
     // std::cout << "playerturn " << static_cast<int>(playerTurn) << std::endl; 
     playerList[playerTurn]->pClock.restart();
 }
@@ -321,6 +410,68 @@ void stateManager::updateTurn(){
 Player* stateManager::whoseTurn(){
     return playerList[playerTurn];
 }
+
+// std::vector<sf::Vector2i> checkKingList;
+// TODO maybe use this function inside possiblesquareslist as well.
+bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
+    // std::vector<sf::Vector2i> tempKingList;
+    sf::Vector2i newPos, newPos2;
+    newPos = piecePos;
+    // for(uint8_t i =0; i < pawnMoves.size(); i++){
+        // newPos = currPos + pawnMoves[i];
+        // if(((newPos.x)>0 && (newPos.y)>0 && (newPos.x)<=BOARD_SIZE && (newPos.y)<=BOARD_SIZE))
+        // {
+    bool pawnFound = false;
+    for(uint8_t j =0; j < pawnMoves.size(); j++){
+        newPos2 = newPos + pawnMoves[j];
+        if(((newPos2.x)>0 && (newPos2.y)>0 && (newPos2.x)<=BOARD_SIZE && (newPos2.y)<=BOARD_SIZE))
+        {
+            if (worldMap.find(*vecKey(newPos2))!=worldMap.end())
+            {
+                if(worldMap[*vecKey(newPos2)]->getPieceType()==TextureID::pieceName::Pawn && worldMap[*vecKey(newPos2)]->getplayerID() != playerRef->getPlayerID()){
+                    // possibleSquaresList(worldMap[*vecKey(newPos2)]->getplayerID(),TextureID::pieceName::Pawn, newPos2, worldMap[*vecKey(newPos2)]);
+                    // TODO how to determine if thing is pinned
+                    if((newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])
+                    || (newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ 1)%TOTAL_DIR]) ){
+                        pawnFound = true;
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    if(pawnFound){
+        return true;
+    }
+    // if (worldMap.find(*vecKey(newPos))!=worldMap.end()) 
+    // {
+    //     if(worldMap[*vecKey(newPos)]->getplayerID() == t_playerID){// our own piece
+    //         continue;
+    //     }
+    //     if(worldMap[*vecKey(newPos)]->getPieceType() == TextureID::pieceName::King){ //opponent king{
+    //         continue;
+    //     }
+    // }
+    
+    // std::cout << "newpos0" << newPos.x << newPos.y << std::endl;
+    std::vector<sf::Vector2i> tempPossibleSquares;
+    possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Queen, newPos, tempPossibleSquares);
+    if(enemySpotted)
+    {
+        return true;
+    }
+    
+    possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Knight, newPos, tempPossibleSquares);
+    if(!enemySpotted)
+    {
+        return false;
+        // tempKingList.push_back(newPos);
+    }else{
+        return true;
+    }
+}
+
 
 Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     sf::Vector2i m;
@@ -331,7 +482,7 @@ Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     return iter == worldMap.end() ? nullptr: iter->second ;
 }
 
-std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, Piece* heldPiece ){
+std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece ){
     //TODO: direction variable incorporation for player 2. Refactor this check afterwards
     // heldpiece needed only to get pawn direcction
     possibleSquares.clear();
@@ -416,7 +567,6 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                                 || worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Rook ){
                                     enemySpotted = true;
                                 // std::cout << "piece spotted " << *vecKey(currPos + *iter) << static_cast<int>(t_pieceType) <<std::endl;
-
                                 }
                             }
 
@@ -463,21 +613,6 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                                         pawnFound = true;
                                          break;
                                     }
-                                    // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares.begin(); iter!=possibleSquares.end();iter++ )
-                                    // {
-                                    //     std::cout<< "pawn possible" <<*vecKey(*iter) << "newpos "<< newPos.x << newPos.y << "newpoas2" << newPos2.x << newPos2.y << std::endl;
-                                    //     // mcInst->setInvisible(iter->x, iter->y);
-                                    // }
-                                    // if(std::find(possibleSquares.begin(), possibleSquares.end(), newPos) != possibleSquares.end()){
-                                    //     if((newPos2.x == newPos.y) || (newPos2.y == newPos.y)  )
-                                    //     {
-                                    //         continue;
-                                    //     }else
-                                    //     {
-                                    //         pawnFound = true;
-                                    //         break;
-                                    //     }
-                                    // }
                                 }
                             }
                         }
@@ -497,42 +632,23 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     }
                     
                     // std::cout << "newpos0" << newPos.x << newPos.y << std::endl;
-                    possibleSquaresList(t_playerID, TextureID::pieceName::Queen, newPos);
+                    std::vector<sf::Vector2i> tempPossibleSquares;
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Queen, newPos, tempPossibleSquares);
                     if(enemySpotted)
                     {
-                    // std::cout << "newpos1" << newPos.x << newPos.y << std::endl;
                         continue;
-
                     }
                     
-                    possibleSquaresList(t_playerID, TextureID::pieceName::Knight, newPos);
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Knight, newPos, tempPossibleSquares);
                     if(!enemySpotted)
                     {
                         tempKingList.push_back(newPos);
-                    // std::cout << "newpos2" << newPos.x << newPos.y << std::endl;
-
-                    }
-                    else
-                    {
-                    // std::cout << "newpos3" << newPos.x << newPos.y << std::endl;
-                        
                     }
                     
                 }
             }
             possibleSquares.clear();
-            std::cout << "possq len" << static_cast<int>(possibleSquares.size()) <<std::endl;
-            // for(std::vector<sf::Vector2i>::iterator iter = tempKingList.begin(); iter!=tempKingList.end();iter++ )
-            // {
-            //     std::cout<< "ll " << *vecKey(*iter) << std::endl;
-            // }
             possibleSquares.assign(tempKingList.begin(), tempKingList.end());
-            // std::copy(tempKingList.begin(), tempKingList.end()+1, possibleSquares.begin());
-            // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares.begin(); iter!=possibleSquares.end();iter++ )
-            // {
-            //     std::cout<< *vecKey(*iter) << std::endl;
-            //     // mcInst->setInvisible(iter->x, iter->y);
-            // }
         }
         break;
         default:

@@ -38,3 +38,11 @@ uint8_t Player::getTime(bool ms) //bool 1 m, 0 s
 {
     return ms ? timeM : timeS;
 }
+
+sf::Vector2i Player::getKingPos(){
+    return kingPos;
+}
+
+void Player::setKingPos(sf::Vector2i newPos){
+    kingPos = newPos;
+}
