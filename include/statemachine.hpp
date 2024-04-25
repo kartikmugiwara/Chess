@@ -88,6 +88,7 @@ struct pieceState{
     sf::Vector2i wasPos;
     sf::Vector2i isPos;
     bool killed;
+    sf::Time remTime;
     // uint16_t wasKilledAtMove;
     // std::map<std::string, Piece* >::iterator worldIter;
 };
@@ -105,6 +106,9 @@ class stateManager{
         sf::Time gameTime;
         uint8_t turn;
         sf::Font uiFont;
+
+        uint16_t totalMoves;
+        uint16_t currMove;
         
         // void initPieces(std::vector<Player>::iterator playerIt, uint8_t orient, sf::Vector2i pos);
 
@@ -123,6 +127,8 @@ class stateManager{
             playerTurn = 0;
             lastMove = movesHist.begin();
             lastDeadMove = deadHist.begin();
+            currMove = 0;
+            totalMoves = 0;
             // playerList.push_back(playerA);
             // playerList.push_back(playerB);
 
@@ -139,8 +145,7 @@ class stateManager{
         std::vector<pieceState> movesHist{};
         std::vector<pieceState> deadHist{};
         std::vector<pieceState>::iterator lastMove, lastDeadMove;
-        uint16_t totalMoves;
-        uint16_t currMove;
+
 
         static stateManager* getInstance();
         void resetGame();
@@ -152,6 +157,10 @@ class stateManager{
         bool underCheck(Player* playerRef);
         void stepFuture();
         void stepPast();
+        void updateTotalMoves(uint16_t delta);
+        void updateCurrentMove(uint16_t delta);
+        uint16_t getTotalMoves();
+        uint16_t getCurrentMove();
 
         Piece* getHeldRef(sf::Vector2i);
         std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece=nullptr);
@@ -160,10 +169,15 @@ class stateManager{
 };
 
 void stateManager::stepFuture(){
-    if(lastMove == movesHist.end() || lastMove == movesHist.end()-1)
+    if(currMove == totalMoves)
         return;
+    if(currMove>=1 && movesHist.begin() != movesHist.end() && lastMove != movesHist.end()-1 )
+    {
+        ++lastMove;
+    }
+    // updateTurn(1);
+    ++currMove;
 
-    ++lastMove;
     lastMove->piece->updatePos(lastMove->isPos);
     worldMap.erase(worldMap.find(*vecKey(lastMove->wasPos)));
 
@@ -181,11 +195,11 @@ void stateManager::stepFuture(){
         updateHell(lastDeadMove->piece->getPlayerRef());
     }
     worldMap.insert({*vecKey(lastMove->isPos), lastMove->piece});
-    updateTurn(1);
+    
 }
 
 void stateManager::stepPast(){
-    if(lastMove == movesHist.begin())
+    if(currMove == 0)
         return;
 
     lastMove->piece->updatePos(lastMove->wasPos);
@@ -197,14 +211,23 @@ void stateManager::stepPast(){
         Piece* revivedPiece = *(lastDeadMove->piece->getPlayerRef()->dead.end() - 1) ;
         lastDeadMove->piece->getPlayerRef()->dead.pop_back();
         deadPiece.pop_back(); // updateshell drawing
-        revivedPiece->getSprite()->scale(1.0, 1.0);
+        revivedPiece->getSprite()->scale(1/0.3, 1/0.3);
         revivedPiece->getPlayerRef()->alive.push_back(revivedPiece);
         revivedPiece->updatePos(lastMove->isPos);
         worldMap.insert({*vecKey(lastMove->isPos), revivedPiece});
         --lastDeadMove;
     }
-    --lastMove;
-    updateTurn(0);
+    
+    --currMove;
+    // updateTurn(0);
+    if(currMove == 0)
+        return;
+    if(lastMove != movesHist.begin())
+    {
+        --lastMove;
+    }
+
+
 }
 
 stateManager* stateManager::getInstance(){
@@ -214,6 +237,22 @@ stateManager* stateManager::getInstance(){
     }
 
     return stateManager::instance_ptr;
+}
+
+void stateManager::updateTotalMoves(uint16_t delta){
+    totalMoves += delta;
+}
+
+void stateManager::updateCurrentMove(uint16_t delta){
+    currMove += delta;
+}
+
+uint16_t stateManager::getTotalMoves(){
+    return totalMoves;
+}
+
+uint16_t stateManager::getCurrentMove(){
+    return currMove;
 }
 
 // stateManager* stateManager::instance_ptr = nullptr;
@@ -291,6 +330,9 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
     {
         if(iter->second->getPieceID() == t_piece->getPieceID())
         {
+            totalMoves += 1;
+            currMove = totalMoves;
+
             worldMap.erase(iter);
             std::map<std::string, Piece* >::iterator it = worldMap.find(*vecKey(t_pos));
             if(it != worldMap.end()) // TODO:  erasing opp piece. Add it to deleted list 
@@ -332,8 +374,6 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
                  worldMap.erase(it);
             }
             worldMap.insert({*vecKey(t_pos), t_piece});
-            totalMoves++;
-            currMove = totalMoves;
             break;
         }
         // mainWindow.draw(*((iter->second)->getSprite()));
@@ -403,8 +443,9 @@ void stateManager::updateTurn(bool future){
     playerTurn = (playerTurn + 1) % playerList.size();
     else
         playerTurn = (playerTurn + (playerList.size()-1)) % playerList.size();
-    // std::cout << "playerturn " << static_cast<int>(playerTurn) << std::endl; 
-    playerList[playerTurn]->pClock.restart();
+    // std::cout << "playerturn " << static_cast<int>(playerTurn) << std::endl;
+    if(currMove == totalMoves) 
+        playerList[playerTurn]->pClock.restart();
 }
 
 Player* stateManager::whoseTurn(){

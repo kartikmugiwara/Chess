@@ -14,18 +14,19 @@ Done:
 Turnwise Play
 Add Score
 Add timer
+Add Undo/Redo
+Add Keyboard
 
 
 TODO: 
-
+Clock mischief resolve on undo, redo
 Add checks, checkmate, winning criteria, Pawn enpassant, Pawn two step, draw/win/
-Add Undo/Redo
+Add moveslist scrolling
 Add Arrows
 Add Premoves
 Add Bar
 Add Engine
 Add Network
-Add Keyboard
 Flip Board
 User customization
 Variants

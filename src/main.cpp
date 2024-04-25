@@ -159,23 +159,27 @@ void GameHandler::processInputs(){
                 break;
             case sf::Event::MouseButtonPressed:
                 // std::cout << "Button Down : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
-                isMousePressed = true;
+                if(smInst->getTotalMoves() == smInst->getCurrentMove())
+                    isMousePressed = true;
                 break;
             case sf::Event::MouseButtonReleased:
                 // std::cout << "Button Up : "<< sf::Mouse::getPosition(mainWindow).x << " " << sf::Mouse::getPosition(mainWindow).y << std::endl;
-                isMousePressed = false;
-                isMouseReleased = true;
-                if(checkedPiece)
+                if(smInst->getTotalMoves() == smInst->getCurrentMove())
                 {
-                    checkedPiece = false;
-                    if(pieceSelectFlag == 2 )
+                    isMousePressed = false;
+                    isMouseReleased = true;
+                    if(checkedPiece)
                     {
-                        pieceSelectFlag = 0;
-                        // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
-                        // {
-                        //     std::cout<< iter->x << " " << iter->y << std::endl;
-                        //     mcInst->setInvisible(iter->x, iter->y);
-                        // }
+                        checkedPiece = false;
+                        if(pieceSelectFlag == 2 )
+                        {
+                            pieceSelectFlag = 0;
+                            // for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                            // {
+                            //     std::cout<< iter->x << " " << iter->y << std::endl;
+                            //     mcInst->setInvisible(iter->x, iter->y);
+                            // }
+                        }
                     }
                 }
                 break;
@@ -202,6 +206,19 @@ void GameHandler::update(sf::Time deltaTime){
         movement.x += DELTA;
         
     smInst->whoseTurn()->updateRemTime();
+    // if(smInst->getTotalMoves() != smInst->getCurrentMove())
+    // {
+    //     sf::Time remTime = smInst->lastMove->remTime;
+    //     uint16_t timeM = ((uint16_t)remTime.asSeconds())/60;
+    //     uint16_t timeS = (uint16_t)(remTime.asSeconds())%60;
+    //     std::string sec_str = std::to_string(timeS);
+    //     if (sec_str.size()==1)
+    //         sec_str = '0' + sec_str;
+    //     std::string min_str = std::to_string(timeM);
+    //     if (min_str.size()==1)
+    //         min_str = '0' + min_str;
+    //     smInst->whoseTurn()->timeText.setString(min_str + " : " + sec_str);
+    // }
     testBall.move(movement * deltaTime.asSeconds());
     if(isMousePressed)
     {
@@ -306,6 +323,7 @@ void GameHandler::update(sf::Time deltaTime){
                                                      .isPos = sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD),
                                                                            1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)),
                                                      .killed = false,
+                                                     .remTime = smInst->whoseTurn()->getRemTime()
                                                     //  .wasKilledAtMove = 0,
                                                     };
                 heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
@@ -350,6 +368,7 @@ void GameHandler::update(sf::Time deltaTime){
                                                      .isPos = sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD),
                                                                            1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)),
                                                      .killed = false,
+                                                     .remTime = smInst->whoseTurn()->getRemTime()
                                                     //  .wasKilledAtMove = 0,
                                                     };
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
@@ -422,7 +441,12 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
             if(!state)
             {
                 smInst->stepPast();
-            std::cout << "left key" << std::endl;
+                for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                {
+                    // std::cout<< iter->x << " inv " << iter->y << std::endl;
+                    mcInst->setInvisible(iter->x, iter->y);
+                }
+            std::cout << "left key" << smInst->movesHist.size() << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
 
             }
             // direction = (state ? (direction | 0x08) : (direction & ~0x08));
@@ -432,7 +456,7 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
         {
             smInst->stepFuture();
             // smInst->stepPast();
-        std::cout << "right key" << std::endl;
+            std::cout << "right key" << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
 
         }
             // direction = (state ? (direction | 0x08) : (direction & ~0x08));
