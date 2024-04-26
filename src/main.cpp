@@ -336,7 +336,23 @@ void GameHandler::update(sf::Time deltaTime){
 
                 smInst->movesHist.push_back(*currMove);
                 smInst->lastMove = smInst->movesHist.end()-1;
-                smInst->updateTurn();
+                if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
+                    smInst->stepPast();
+                    smInst->updateTotalMoves(-1);
+                    smInst->movesHist.pop_back();
+                    if(currMove->killed)
+                    {
+                        smInst->deadHist.pop_back();
+                    }
+                    std::cout << "under check curr player, then piece is pinned"<< std::endl;
+                }
+                else
+                {
+                    smInst->updateTurn();
+                }
+                // smInst->updateTurn();
+                if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos()))
+                    std::cout << "under check opp player"<< std::endl;
             }
             else{
                 if(pieceSelectFlag!=0) // pakad ke galat jagah rakho to red dot delete mat karna
@@ -381,7 +397,22 @@ void GameHandler::update(sf::Time deltaTime){
 
                     smInst->movesHist.push_back(*currMove);
                     smInst->lastMove = smInst->movesHist.end()-1;
-                    smInst->updateTurn();
+                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
+                        smInst->stepPast();
+                        smInst->updateTotalMoves(-1);
+                        smInst->movesHist.pop_back();
+                        if(currMove->killed)
+                        {
+                            smInst->deadHist.pop_back();
+                        }
+                        std::cout << "under check curr player, then piece is pinned"<< std::endl;
+                    }
+                    else
+                    {
+                        smInst->updateTurn();
+                    }
+                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos()))
+                        std::cout << "under check opp player"<< std::endl;
 
                 }
                     previousHeldPiece = nullptr;

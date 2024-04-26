@@ -157,8 +157,8 @@ class stateManager{
         bool underCheck(Player* playerRef);
         void stepFuture();
         void stepPast();
-        void updateTotalMoves(uint16_t delta);
-        void updateCurrentMove(uint16_t delta);
+        void updateTotalMoves(int16_t delta);
+        void updateCurrentMove(int16_t delta);
         uint16_t getTotalMoves();
         uint16_t getCurrentMove();
 
@@ -239,11 +239,11 @@ stateManager* stateManager::getInstance(){
     return stateManager::instance_ptr;
 }
 
-void stateManager::updateTotalMoves(uint16_t delta){
+void stateManager::updateTotalMoves(int16_t delta){
     totalMoves += delta;
 }
 
-void stateManager::updateCurrentMove(uint16_t delta){
+void stateManager::updateCurrentMove(int16_t delta){
     currMove += delta;
 }
 
@@ -458,6 +458,7 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
     // std::vector<sf::Vector2i> tempKingList;
     sf::Vector2i newPos, newPos2;
     newPos = piecePos;
+    std::cout << piecePos.x << piecePos.y <<std::endl;
     // for(uint8_t i =0; i < pawnMoves.size(); i++){
         // newPos = currPos + pawnMoves[i];
         // if(((newPos.x)>0 && (newPos.y)>0 && (newPos.x)<=BOARD_SIZE && (newPos.y)<=BOARD_SIZE))
