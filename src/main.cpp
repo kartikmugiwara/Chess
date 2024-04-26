@@ -352,7 +352,22 @@ void GameHandler::update(sf::Time deltaTime){
                 }
                 // smInst->updateTurn();
                 if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos()))
+                {
                     std::cout << "under check opp player"<< std::endl;
+                    // TODO check for checkmate
+                    // this is going to be tough mf.
+                    for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
+                        {
+                            std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                        }
+                        for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
+                        {
+                            std::cout << "attack squares";
+                            std::cout << iter->x << iter->y << std::endl;
+                            // smInst->kingAttacker.clear();
+                        }
+
+                }
             }
             else{
                 if(pieceSelectFlag!=0) // pakad ke galat jagah rakho to red dot delete mat karna
@@ -411,8 +426,20 @@ void GameHandler::update(sf::Time deltaTime){
                     {
                         smInst->updateTurn();
                     }
-                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos()))
+                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
                         std::cout << "under check opp player"<< std::endl;
+                        // TODO Opposite king ki mkb check karo
+                        for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
+                        {
+                            std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                        }
+                        for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
+                        {
+                            std::cout << "attack squares";
+                            std::cout << iter->x << iter->y << std::endl;
+                            // smInst->kingAttacker.clear();
+                        }
+                    }
 
                 }
                     previousHeldPiece = nullptr;

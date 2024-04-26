@@ -139,8 +139,8 @@ class stateManager{
         Player* playerB;
         uint8_t playerTurn;
         std::map<std::string, Piece* > worldMap, shadowMap;
-        std::vector<Piece*> deadPiece;
-        std::vector<sf::Vector2i> smPossibleSquares; // TODO: this is primitive, without taking many things into account
+        std::vector<Piece*> deadPiece, kingAttacker;
+        std::vector<sf::Vector2i> smPossibleSquares, smAttackSquares; // TODO: this is primitive, without taking many things into account
         std::vector<Player*> playerList; 
         std::vector<pieceState> movesHist{};
         std::vector<pieceState> deadHist{};
@@ -439,6 +439,7 @@ void stateManager::calculateScore(Player* playerRef)
 }
 
 void stateManager::updateTurn(bool future){
+    // clear kingAttackers and smAttacksquares here maybe
     if(future)
     playerTurn = (playerTurn + 1) % playerList.size();
     else
@@ -458,12 +459,15 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
     // std::vector<sf::Vector2i> tempKingList;
     sf::Vector2i newPos, newPos2;
     newPos = piecePos;
-    std::cout << piecePos.x << piecePos.y <<std::endl;
+    smAttackSquares.clear();
+    kingAttacker.clear();
+    // std::cout << piecePos.x << piecePos.y <<std::endl;
     // for(uint8_t i =0; i < pawnMoves.size(); i++){
         // newPos = currPos + pawnMoves[i];
         // if(((newPos.x)>0 && (newPos.y)>0 && (newPos.x)<=BOARD_SIZE && (newPos.y)<=BOARD_SIZE))
         // {
     bool pawnFound = false;
+    int8_t pawnAtt = -1;
     for(uint8_t j =0; j < pawnMoves.size(); j++){
         newPos2 = newPos + pawnMoves[j];
         if(((newPos2.x)>0 && (newPos2.y)>0 && (newPos2.x)<=BOARD_SIZE && (newPos2.y)<=BOARD_SIZE))
@@ -476,6 +480,8 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
                     if((newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])
                     || (newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ 1)%TOTAL_DIR]) ){
                         pawnFound = true;
+                        pawnAtt = j;
+                        kingAttacker.push_back(worldMap[*vecKey(newPos2)]);
                             break;
                     }
                 }
@@ -484,6 +490,7 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
     }
 
     if(pawnFound){
+        //TODO only stat = mk
         return true;
     }
     // if (worldMap.find(*vecKey(newPos))!=worldMap.end()) 
@@ -495,23 +502,44 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
     //         continue;
     //     }
     // }
-    
+    bool foundAttacker = false;
     // std::cout << "newpos0" << newPos.x << newPos.y << std::endl;
     std::vector<sf::Vector2i> tempPossibleSquares;
-    possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Queen, newPos, tempPossibleSquares);
+    possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Bishop, newPos, tempPossibleSquares);
     if(enemySpotted)
     {
-        return true;
+        smAttackSquares.insert(smAttackSquares.end(),tempPossibleSquares.begin(),tempPossibleSquares.end());
+        // return true;
+        foundAttacker = true;
+    }
+
+    // possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Queen, newPos, tempPossibleSquares);
+    // if(enemySpotted)
+    // {
+    //     smAttackSquares.insert(smAttackSquares.end(),tempPossibleSquares.begin(),tempPossibleSquares.end());
+    //     // return true;
+    // }
+
+    possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Rook, newPos, tempPossibleSquares);
+    if(enemySpotted)
+    {
+        smAttackSquares.insert(smAttackSquares.end(),tempPossibleSquares.begin(),tempPossibleSquares.end());
+        // return true;
+        foundAttacker = true;
+
     }
     
     possibleSquaresList(playerRef->getPlayerID(), TextureID::pieceName::Knight, newPos, tempPossibleSquares);
     if(!enemySpotted)
     {
-        return false;
+        // return false;
         // tempKingList.push_back(newPos);
     }else{
-        return true;
+        //beacause knight cannot be blocked
+        // smAttackSquares.insert(smAttackSquares.end(),tempPossibleSquares.begin(),tempPossibleSquares.end());
+        // return true;
     }
+    return enemySpotted || foundAttacker;
 }
 
 
@@ -563,6 +591,7 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                             if(worldMap[*vecKey(currPos + *iter)]->getPieceType() == TextureID::pieceName::Knight)
                             {
                                 // std::cout << "knight spotted " << *vecKey(currPos + *iter) <<std::endl;
+                                kingAttacker.push_back(worldMap[*vecKey(currPos + *iter)]);
                                 enemySpotted = true;
                             }
                         }
@@ -604,9 +633,10 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                             if(worldMap[*vecKey(currPos + newpos)]->getplayerID()!= t_playerID )//opponent piece
                             {
                                 possibleSquares.push_back(currPos + newpos);
-                                if(worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Queen
-                                || worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Bishop
-                                || worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Rook ){
+                                if( ( ((worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Bishop) || (worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Queen))  && (t_pieceType == TextureID::pieceName::Bishop))
+                                || (((worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Rook)) || (worldMap[*vecKey(currPos + newpos)]->getPieceType() == TextureID::pieceName::Queen)) && (t_pieceType == TextureID::pieceName::Rook) ){
+                                    
+                                    kingAttacker.push_back(worldMap[*vecKey(currPos + newpos)]);
                                     enemySpotted = true;
                                 // std::cout << "piece spotted " << *vecKey(currPos + *iter) << static_cast<int>(t_pieceType) <<std::endl;
                                 }
@@ -635,6 +665,7 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                 // check separately for pawn because pawnmoves are fucking weird here.
                 // TODO: this algo can be a lot better for pawn check
             std::vector<sf::Vector2i> tempKingList;
+            // smAttackSquares.clear();
             sf::Vector2i newPos, newPos2;
             for(uint8_t i =0; i < pawnMoves.size(); i++){
                 newPos = currPos + pawnMoves[i];
@@ -678,6 +709,7 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     possibleSquaresList(t_playerID, TextureID::pieceName::Queen, newPos, tempPossibleSquares);
                     if(enemySpotted)
                     {
+                        // all mkb possible
                         continue;
                     }
                     
@@ -685,6 +717,10 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     if(!enemySpotted)
                     {
                         tempKingList.push_back(newPos);
+                    }
+                    else
+                    {
+
                     }
                     
                 }

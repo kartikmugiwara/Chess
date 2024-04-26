@@ -6,6 +6,13 @@
 #include <SFML/System.hpp>
 #include <gameconfig.hpp>
 // #include <piece.hpp>
+struct kingStat{
+    bool move;
+    bool kill;
+    bool block;
+};
+
+typedef struct kingStat kingStat;
 
 class Piece; //Forward declaration
 class Player{
@@ -32,6 +39,13 @@ class Player{
             timeText.setOutlineThickness(2.0);
             timeText.setStyle(sf::Text::Bold);
             
+            kingStatus.setFont(f);
+            kingStatus.setCharacterSize(40); // in pixels, not points!
+            kingStatus.setFillColor(sf::Color(255,0,0,100));
+            kingStatus.setOutlineColor(sf::Color(255,255,255,100));
+            kingStatus.setOutlineThickness(3.0);
+            kingStatus.setStyle(sf::Text::Bold);
+            
             scoreRect.setSize(sf::Vector2f(150.0, 50.0));
             scoreRect.setFillColor(sf::Color(255,255,255,30));
             pRemTime = sf::seconds(TOTAL_GAME_SEC);
@@ -42,9 +56,10 @@ class Player{
         sf::Vector2i deathPos;
         sf::Clock pClock;
 
-        sf::Text scoreText, timeText;
+        sf::Text scoreText, timeText, kingStatus;
         sf::RectangleShape scoreRect;
-        
+        kingStat stat{false, false, false};
+
         uint8_t getDirection();
         uint8_t getScore();
         uint8_t getTime(bool ms); //bool 1 m, 0 s
