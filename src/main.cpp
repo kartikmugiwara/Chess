@@ -254,7 +254,7 @@ void GameHandler::update(sf::Time deltaTime){
                 }
                 else
                 {
-                    possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), smInst->smPossibleSquares, heldPiece);
+                    possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), smInst->smPossibleSquares, heldPiece, true);
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                     {
                         // std::cout<< iter->x << " vi " << iter->y << std::endl;
@@ -336,7 +336,8 @@ void GameHandler::update(sf::Time deltaTime){
 
                 smInst->movesHist.push_back(*currMove);
                 smInst->lastMove = smInst->movesHist.end()-1;
-                if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
+                smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
+                if(smInst->whoseTurn()->stat.undercheck){
                     smInst->stepPast();
                     smInst->updateTotalMoves(-1);
                     smInst->movesHist.pop_back();
@@ -351,8 +352,8 @@ void GameHandler::update(sf::Time deltaTime){
                     smInst->updateTurn();
                 }
                 // smInst->updateTurn();
-                if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos()))
-                {
+                smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
+                if(smInst->whoseTurn()->stat.undercheck){
                     std::cout << "under check opp player"<< std::endl;
                     // TODO check for checkmate
                     // this is going to be tough mf.
@@ -412,7 +413,8 @@ void GameHandler::update(sf::Time deltaTime){
 
                     smInst->movesHist.push_back(*currMove);
                     smInst->lastMove = smInst->movesHist.end()-1;
-                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
+                    smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
+                    if(smInst->whoseTurn()->stat.undercheck){
                         smInst->stepPast();
                         smInst->updateTotalMoves(-1);
                         smInst->movesHist.pop_back();
@@ -426,7 +428,8 @@ void GameHandler::update(sf::Time deltaTime){
                     {
                         smInst->updateTurn();
                     }
-                    if(smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos())){
+                    smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
+                    if(smInst->whoseTurn()->stat.undercheck){
                         std::cout << "under check opp player"<< std::endl;
                         // TODO Opposite king ki mkb check karo
                         for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)

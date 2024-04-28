@@ -41,6 +41,7 @@ public:
     uint16_t getPieceID();
     uint8_t getplayerID();
     void setPlayerID(uint8_t player);
+    void setPos(sf::Vector2i newCord);
 
     sf::Time getRemTime();
     void updateRemTime();

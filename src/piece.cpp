@@ -14,6 +14,12 @@ sf::Vector2i Piece::getPos(){
     return pos;
 }
 
+void Piece::setPos(sf::Vector2i newCord){
+    pos = newCord;
+    if(this->getPieceType() == TextureID::pieceName::King)
+            this->getPlayerRef()->setKingPos(pos);
+}
+
 void Piece::updatePos(sf::Vector2i newCord, bool set){ // TODO: maybe some movePos kind of thing can be added as well.
     if(set){
         pos = newCord;

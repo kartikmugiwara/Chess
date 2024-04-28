@@ -162,10 +162,11 @@ class stateManager{
         uint16_t getTotalMoves();
         uint16_t getCurrentMove();
 
-        Piece* getHeldRef(sf::Vector2i);
-        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece=nullptr);
-        bool underCheck(Player* playerRef, sf::Vector2i piecePos );
 
+        Piece* getHeldRef(sf::Vector2i);
+        std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece=nullptr, bool checkPossibility = false);
+        bool underCheck(Player* playerRef, sf::Vector2i piecePos );
+        bool checkCheckMate(Player* playerRef);
 };
 
 void stateManager::stepFuture(){
@@ -382,6 +383,7 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
     }
 }
 
+
 void stateManager::updateHell(Player* playerRef){
     int16_t pawnSadasyaPosX = 0;
     int16_t royalSadasyaPosX = 0;
@@ -543,6 +545,12 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
 }
 
 
+// bool stateManager::checkCheckMate(Player* playerRef){
+// ;
+
+// }
+
+
 Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     sf::Vector2i m;
     m.x = mouse.x / (PIECE_SIZE + 2*PIECE_PAD) + 1;
@@ -552,7 +560,7 @@ Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     return iter == worldMap.end() ? nullptr: iter->second ;
 }
 
-std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece ){
+std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece , bool checkPossibility ){
     //TODO: direction variable incorporation for player 2. Refactor this check afterwards
     // heldpiece needed only to get pawn direcction
     possibleSquares.clear();
@@ -562,6 +570,7 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
         {
             if(worldMap.find(*vecKey(currPos + pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
             {
+                // if(whoseTurn()->stat.undercheck)
                 possibleSquares.push_back(currPos + pawnMoves[heldPiece->getDirection()]);
             }    
             if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])]->getplayerID()!= t_playerID)
@@ -706,7 +715,14 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     
                     // std::cout << "newpos0" << newPos.x << newPos.y << std::endl;
                     std::vector<sf::Vector2i> tempPossibleSquares;
-                    possibleSquaresList(t_playerID, TextureID::pieceName::Queen, newPos, tempPossibleSquares);
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Bishop, newPos, tempPossibleSquares);
+                    if(enemySpotted)
+                    {
+                        // all mkb possible
+                        continue;
+                    }
+
+                    possibleSquaresList(t_playerID, TextureID::pieceName::Rook, newPos, tempPossibleSquares);
                     if(enemySpotted)
                     {
                         // all mkb possible
@@ -734,6 +750,50 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
             std::cout << "Some unknown character has entered battlefield! " << std::endl;
         }
 
+    }
+
+    if(whoseTurn()->stat.undercheck && checkPossibility)
+    {
+        std::vector<sf::Vector2i> tempPossibleSquares;
+        // std::map<std::string, Piece* >::iterator currPieceI = worldMap.find(*vecKey(currPos));
+        // Piece* currPiece = currPieceI->second;
+        //instead of this, just use heldpiece as currpiece
+        worldMap.erase(worldMap.find(*vecKey(heldPiece->getPos()))); 
+        for(std::vector<sf::Vector2i>::iterator iter = possibleSquares.begin(); iter != possibleSquares.end(); iter++){
+
+            std::map<std::string, Piece* >::iterator tarPieceI = worldMap.find(*vecKey(*iter));
+            Piece* targetPiece = nullptr;
+            heldPiece->setPos(*iter);
+            if(tarPieceI != worldMap.end())
+            {
+                targetPiece = tarPieceI->second;
+                // worldMap.erase(tarPieceI);
+                tarPieceI->second = heldPiece; //substitute
+            }
+            else
+            {
+                worldMap.insert({*vecKey(*iter), heldPiece });
+            }
+
+            // // worldMap.insert({*vecKey(*iter), });
+
+            bool check = underCheck(whoseTurn(), whoseTurn()->getKingPos());
+
+            if(targetPiece==nullptr){
+                worldMap.erase(worldMap.find(*vecKey(*iter)));
+            }else
+            {
+                tarPieceI->second = targetPiece;
+            }
+
+            if(!check){// these are actual impossible squares
+                tempPossibleSquares.push_back(*iter);
+            }
+        }
+        heldPiece->setPos(currPos);
+        worldMap.insert({*vecKey(currPos), heldPiece});
+        possibleSquares.clear();
+        possibleSquares.assign(tempPossibleSquares.begin(), tempPossibleSquares.end());
     }
     return &possibleSquares;
 }

@@ -19,6 +19,7 @@ Add Keyboard
 
 
 TODO: 
+there are places with elements erase and insert where pointer substitution will be better 
 Clock mischief resolve on undo, redo
 Add checks, checkmate, winning criteria, Pawn enpassant, Pawn two step, draw/win/
 Add moveslist scrolling

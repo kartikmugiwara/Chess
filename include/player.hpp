@@ -10,6 +10,7 @@ struct kingStat{
     bool move;
     bool kill;
     bool block;
+    bool undercheck;
 };
 
 typedef struct kingStat kingStat;
@@ -50,6 +51,8 @@ class Player{
             scoreRect.setFillColor(sf::Color(255,255,255,30));
             pRemTime = sf::seconds(TOTAL_GAME_SEC);
 
+            stat.undercheck = false;
+
         }
 
         std::vector<Piece*> alive{}, dead{};
@@ -58,7 +61,7 @@ class Player{
 
         sf::Text scoreText, timeText, kingStatus;
         sf::RectangleShape scoreRect;
-        kingStat stat{false, false, false};
+        kingStat stat{false, false, false,false};
 
         uint8_t getDirection();
         uint8_t getScore();
