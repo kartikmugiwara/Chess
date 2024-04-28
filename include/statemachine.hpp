@@ -129,6 +129,7 @@ class stateManager{
             lastDeadMove = deadHist.begin();
             currMove = 0;
             totalMoves = 0;
+            gameEnded = false;
             // playerList.push_back(playerA);
             // playerList.push_back(playerB);
 
@@ -145,7 +146,7 @@ class stateManager{
         std::vector<pieceState> movesHist{};
         std::vector<pieceState> deadHist{};
         std::vector<pieceState>::iterator lastMove, lastDeadMove;
-
+        bool gameEnded;
 
         static stateManager* getInstance();
         void resetGame();
@@ -269,12 +270,15 @@ void stateManager::resetGame(){
     playerA->scoreText.setString("Player"+std::to_string(playerA->getPlayerID())+" : "+std::to_string(0));
     playerA->timeText.setPosition(playerA->deathPos.x + 3*PIECE_PAD, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
     playerA->scoreRect.setPosition(playerA->deathPos.x, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*10*PIECE_PAD);
+    playerA->kingStatus.setPosition(playerA->deathPos.x + 3*PIECE_PAD, playerA->deathPos.y + pawnMoves[playerA->getDirection()].y*17*PIECE_PAD);
     
     playerB->deathPos = deathPosition2;
     playerB->scoreText.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*10*PIECE_PAD);
     playerB->scoreText.setString("Player"+std::to_string(playerB->getPlayerID())+" : "+std::to_string(0));
     playerB->timeText.setPosition(playerB->deathPos.x + 3*PIECE_PAD, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*18*PIECE_PAD);
     playerB->scoreRect.setPosition(playerB->deathPos.x, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*18*PIECE_PAD);
+    playerB->kingStatus.setPosition(playerB->deathPos.x + 3*PIECE_PAD, playerB->deathPos.y + pawnMoves[playerB->getDirection()].y*25*PIECE_PAD);
+    
     playerA->pClock.restart();
     playerB->pClock.restart();
 

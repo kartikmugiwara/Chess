@@ -35,17 +35,18 @@ class Player{
 
             timeText.setFont(f);
             timeText.setCharacterSize(40); // in pixels, not points!
-            timeText.setFillColor(sf::Color::Red);
+            timeText.setFillColor(sf::Color::Green);
             timeText.setOutlineColor(sf::Color::Black);
             timeText.setOutlineThickness(2.0);
             timeText.setStyle(sf::Text::Bold);
             
             kingStatus.setFont(f);
             kingStatus.setCharacterSize(40); // in pixels, not points!
-            kingStatus.setFillColor(sf::Color(255,0,0,100));
-            kingStatus.setOutlineColor(sf::Color(255,255,255,100));
+            kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
+            kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
             kingStatus.setOutlineThickness(3.0);
             kingStatus.setStyle(sf::Text::Bold);
+            kingStatus.setString("Check !");
             
             scoreRect.setSize(sf::Vector2f(150.0, 50.0));
             scoreRect.setFillColor(sf::Color(255,255,255,30));

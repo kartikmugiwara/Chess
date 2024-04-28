@@ -17,6 +17,9 @@
 stateManager* stateManager::instance_ptr =nullptr;
 stateManager* smInst = stateManager::getInstance();
 
+bool justHadCheck = false;
+std::vector<sf::Vector2i> tempPossibleSquares;
+
 class movementCircle
 {
     movementCircle(){
@@ -131,13 +134,19 @@ void GameHandler::render(){
 
     for(std::vector<Player*>::iterator i = smInst->playerList.begin(); i != smInst->playerList.end();i++){
         if((*i)->getPlayerID() == smInst->whoseTurn()->getPlayerID()){
-            (*i)->scoreRect.setFillColor(sf::Color(255,255,255,100));
+            (*i)->scoreRect.setFillColor(sf::Color(255,255,255,255));
         }else{
             (*i)->scoreRect.setFillColor(sf::Color(255,255,255,30));
         }
+
+        // if(justHadCheck){
+            mainWindow.draw((*i)->kingStatus);
+        //     justHadCheck = false;
+        // }
         mainWindow.draw((*i)->scoreRect);
         mainWindow.draw((*i)->scoreText);
         mainWindow.draw((*i)->timeText);
+
     }
 
     mcInst->renderAll(mainWindow);
@@ -345,29 +354,57 @@ void GameHandler::update(sf::Time deltaTime){
                     {
                         smInst->deadHist.pop_back();
                     }
-                    std::cout << "under check curr player, then piece is pinned"<< std::endl;
+                    // std::cout << "under check curr player, then piece is pinned"<< std::endl;
                 }
                 else
                 {
+                    if(justHadCheck)
+                    {
+                        smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
+                        smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
+                    }
                     smInst->updateTurn();
                 }
                 // smInst->updateTurn();
                 smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
                 if(smInst->whoseTurn()->stat.undercheck){
-                    std::cout << "under check opp player"<< std::endl;
+                    // std::cout << "under check opp player"<< std::endl;
+                    smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,255));
+                    smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,255));
+                    justHadCheck = true;
                     // TODO check for checkmate
                     // this is going to be tough mf.
-                    for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
+                    // for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
+                    //     {
+                    //         std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                    //     }
+                    //     for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
+                    //     {
+                    //         std::cout << "attack squares";
+                    //         std::cout << iter->x << iter->y << std::endl;
+                    //         // smInst->kingAttacker.clear();
+                    //     }
+                    // uint16_t possMovesSum = 0;
+                    smInst->gameEnded = true;
+                    for(std::vector<Piece*>::iterator iter = smInst->whoseTurn()->alive.begin(); iter!=smInst->whoseTurn()->alive.end(); iter++){
+                        smInst->possibleSquaresList(smInst->whoseTurn()->getPlayerID(), (*iter)->getPieceType(), (*iter)->getPos(), tempPossibleSquares, *iter,true);
+                        // std::cout << "possibleSquares size : " << tempPossibleSquares.size() << *vecKey((*iter)->getPos()) <<std::endl;
+                        if(tempPossibleSquares.size() != 0)
                         {
-                            std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                            smInst->gameEnded = false;
+                            break;
                         }
-                        for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
-                        {
-                            std::cout << "attack squares";
-                            std::cout << iter->x << iter->y << std::endl;
-                            // smInst->kingAttacker.clear();
-                        }
+                    }
 
+
+
+                }else
+                {
+                    // if(justHadCheck)
+                    // {
+                    //     smInst->whoseTurn()->kingStatus.setFillColor(CHECK_COLOR);
+                    //     smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(255,255,255,0));
+                    // }
                 }
             }
             else{
@@ -422,25 +459,50 @@ void GameHandler::update(sf::Time deltaTime){
                         {
                             smInst->deadHist.pop_back();
                         }
-                        std::cout << "under check curr player, then piece is pinned"<< std::endl;
+                        // std::cout << "under check curr player, then piece is pinned"<< std::endl;
                     }
                     else
                     {
+                        if(justHadCheck)
+                        {
+                            smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
+                            smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
+                        }
                         smInst->updateTurn();
                     }
                     smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
                     if(smInst->whoseTurn()->stat.undercheck){
-                        std::cout << "under check opp player"<< std::endl;
+                        // std::cout << "under check opp player"<< std::endl;
+                        justHadCheck = true;
+                        smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,255));
+                        smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,255));
                         // TODO Opposite king ki mkb check karo
-                        for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
-                        {
-                            std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                        // for(std::vector<Piece*>::iterator iter=smInst->kingAttacker.begin();iter!=smInst->kingAttacker.end();iter++)
+                        // {
+                        //     std::cout << (*iter)->getPieceType() << (*iter)->getPos().x << (*iter)->getPos().y << std::endl;
+                        // }
+                        // for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
+                        // {
+                        //     std::cout << "attack squares";
+                        //     std::cout << iter->x << iter->y << std::endl;
+                        //     // smInst->kingAttacker.clear();
+                        // }
+                        smInst->gameEnded = true;
+                        for(std::vector<Piece*>::iterator iter = smInst->whoseTurn()->alive.begin(); iter!=smInst->whoseTurn()->alive.end(); iter++){
+                            smInst->possibleSquaresList(smInst->whoseTurn()->getPlayerID(), (*iter)->getPieceType(), (*iter)->getPos(), tempPossibleSquares, *iter,true);
+                            // std::cout << "possibleSquares size : " << tempPossibleSquares.size() << *vecKey((*iter)->getPos()) <<std::endl;
+                            if(tempPossibleSquares.size() != 0)
+                            {
+                                smInst->gameEnded = false;
+                                break;
+                            }
                         }
-                        for(std::vector<sf::Vector2i>::iterator iter=smInst->smAttackSquares.begin();iter!=smInst->smAttackSquares.end();iter++)
+                    }else
+                    {
+                        if(!justHadCheck)
                         {
-                            std::cout << "attack squares";
-                            std::cout << iter->x << iter->y << std::endl;
-                            // smInst->kingAttacker.clear();
+                            smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
+                            smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
                         }
                     }
 
@@ -457,6 +519,7 @@ void GameHandler::update(sf::Time deltaTime){
             }
         }
         isMouseReleased = false;
+        std::cout << "game ended : " << smInst->gameEnded << std::endl;
     }
     // std::cout << std::dec << (int)testBall.getPosition().x << std::endl;
     // testBall.setPosition(sf::Mouse::getPosition().x , sf::Mouse::getPosition().y );
@@ -507,7 +570,7 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
                     // std::cout<< iter->x << " inv " << iter->y << std::endl;
                     mcInst->setInvisible(iter->x, iter->y);
                 }
-            std::cout << "left key" << smInst->movesHist.size() << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
+            // std::cout << "left key" << smInst->movesHist.size() << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
 
             }
             // direction = (state ? (direction | 0x08) : (direction & ~0x08));
@@ -517,7 +580,7 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
         {
             smInst->stepFuture();
             // smInst->stepPast();
-            std::cout << "right key" << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
+            // std::cout << "right key" << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
 
         }
             // direction = (state ? (direction | 0x08) : (direction & ~0x08));
@@ -541,7 +604,7 @@ GameHandler::GameHandler(): mainWindow(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_
 
     player.setTexture(testTexture);
     player.scale(0.5, 0.5);
-    std::cout << "Player info: " << testTexture.getSize().x << testTexture.getSize().y << testTexture.getMaximumSize()<<  std::endl ; // see flush effect here by removing endl :)
+    // std::cout << "Player info: " << testTexture.getSize().x << testTexture.getSize().y << testTexture.getMaximumSize()<<  std::endl ; // see flush effect here by removing endl :)
     smInst->resetGame();
     // std::cout << *vecKey(sf::Vector2i(1,11))<< static_cast<char>(64)<<std::endl;
 }
