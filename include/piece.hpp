@@ -51,6 +51,7 @@ public:
     uint8_t getDirection();
     Player* getPlayerRef();
  
+    sf::Vector2i homePos;
 private:
 
     static uint16_t globalPieceID;

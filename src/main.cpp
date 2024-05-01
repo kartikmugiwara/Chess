@@ -264,6 +264,7 @@ void GameHandler::update(sf::Time deltaTime){
                 else
                 {
                     possibleSquares = smInst->possibleSquaresList(heldPiece->getplayerID(), heldPiece->getPieceType(), heldPiece->getPos(), smInst->smPossibleSquares, heldPiece, true);
+
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
                     {
                         // std::cout<< iter->x << " vi " << iter->y << std::endl;
@@ -363,7 +364,20 @@ void GameHandler::update(sf::Time deltaTime){
                         smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
                         smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
                     }
+                    // last pawn moved two steps
+                    if(currMove->piece->getPieceType() == TextureID::Pawn)
+                    {
+                        smInst->lastPawnJump = false;
+                        int16_t xdiff = (currMove->wasPos.x - currMove->isPos.x) * (currMove->wasPos.x - currMove->isPos.x);
+                        int16_t ydiff = (currMove->wasPos.y - currMove->isPos.y) * (currMove->wasPos.y - currMove->isPos.y);
+                        if((xdiff + ydiff) > 2)
+                        {
+                            smInst->lastPawnJump = true;
+                        }
+
+                    }
                     smInst->updateTurn();
+
                 }
                 // smInst->updateTurn();
                 smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
@@ -467,6 +481,17 @@ void GameHandler::update(sf::Time deltaTime){
                         {
                             smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
                             smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
+                        }
+                        if(currMove->piece->getPieceType() == TextureID::Pawn)
+                        {
+                            smInst->lastPawnJump = false;
+                            int16_t xdiff = (currMove->wasPos.x - currMove->isPos.x) * (currMove->wasPos.x - currMove->isPos.x);
+                            int16_t ydiff = (currMove->wasPos.y - currMove->isPos.y) * (currMove->wasPos.y - currMove->isPos.y);
+                            if((xdiff + ydiff) > 2)
+                            {
+                                smInst->lastPawnJump = true;
+                            }
+
                         }
                         smInst->updateTurn();
                     }

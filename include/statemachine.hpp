@@ -130,6 +130,8 @@ class stateManager{
             currMove = 0;
             totalMoves = 0;
             gameEnded = false;
+
+            lastPawnJump = false;
             // playerList.push_back(playerA);
             // playerList.push_back(playerB);
 
@@ -168,6 +170,7 @@ class stateManager{
         std::vector<sf::Vector2i>* possibleSquaresList(uint8_t t_playerID, TextureID::pieceName t_pieceType, sf::Vector2i currPos, std::vector<sf::Vector2i>& possibleSquares, Piece* heldPiece=nullptr, bool checkPossibility = false);
         bool underCheck(Player* playerRef, sf::Vector2i piecePos );
         bool checkCheckMate(Player* playerRef);
+        bool lastPawnJump;
 };
 
 void stateManager::stepFuture(){
@@ -294,10 +297,12 @@ void stateManager::resetGame(){
         Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos}, playerA);
         royal->updatePos(pos);
         worldMap.insert({*vecKey(pos), royal} );
+        royal->homePos = pos;
         pos = sf::Vector2i(i, pawnOffset);
         Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos}, playerA);
         pawn->updatePos(pos);        
         worldMap.insert({*vecKey(pos), pawn} );
+        pawn->homePos = pos;
         royal->setTexture(pieceCostHandler.getCostume(royal->getPieceType()));
         pawn->setTexture(pieceCostHandler.getCostume(pawn->getPieceType()));
         royal->getSprite()->setScale(SCALE_F, SCALE_F);
@@ -314,10 +319,12 @@ void stateManager::resetGame(){
         Piece* royal = new Piece( pieceInfo{.pieceType=defaultPieceList1[i-1].pieceType, .piecePos = pos }, playerB);
         royal->updatePos(pos);
         worldMap.insert({*vecKey(pos), royal} );
+        royal->homePos = pos;
         pos = sf::Vector2i(i, pawnOffset) + sf::Vector2i(0,5); 
         Piece* pawn = new Piece( pieceInfo{.pieceType=TextureID::pieceName::Pawn, .piecePos = pos }, playerB);
         pawn->updatePos(pos);        
         worldMap.insert({*vecKey(pos), pawn} );
+        pawn->homePos = pos;
         royal->setTexture(EvilPieceCostHandler.getCostume(royal->getPieceType()));
         pawn->setTexture(EvilPieceCostHandler.getCostume(pawn->getPieceType()));
         royal->getSprite()->setScale(SCALE_F, SCALE_F);
@@ -572,6 +579,21 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
     switch(t_pieceType){
         case TextureID::pieceName::Pawn: // TODO:: enpassant and shit
         {
+            if(lastPawnJump)
+            {
+                if( abs(lastMove->isPos.x - heldPiece->getPos().x) == 1 )
+                {
+                    possibleSquares.push_back(lastMove->isPos + pawnMoves[heldPiece->getDirection()]);
+                }
+            }
+            if(heldPiece->getPos() == heldPiece->homePos)
+            {
+                if(worldMap.find(*vecKey(currPos + 2*pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
+                {
+                    // if(whoseTurn()->stat.undercheck)
+                    possibleSquares.push_back(currPos + 2*pawnMoves[heldPiece->getDirection()]);
+                } 
+            }
             if(worldMap.find(*vecKey(currPos + pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
             {
                 // if(whoseTurn()->stat.undercheck)
