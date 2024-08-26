@@ -59,12 +59,16 @@ movementCircle* movementCircle::getInstance(){
 }
 
 void movementCircle::setVisible(uint8_t i, uint8_t j){
-    movementCircle::cshape[i-1][j-1].setFillColor(sf::Color(128, 0, 0, 80));
+    movementCircle::cshape[i-1][j-1].setFillColor(sf::Color(255, 255, 0, 255));
+    movementCircle::cshape[i-1][j-1].setOutlineColor(sf::Color(255, 165, 0 ,255));
+    movementCircle::cshape[i-1][j-1].setOutlineThickness(2.0);
 }
 
 
 void movementCircle::setInvisible(uint8_t i, uint8_t j){
     movementCircle::cshape[i-1][j-1].setFillColor(sf::Color(128, 0, 0, 0));
+    movementCircle::cshape[i-1][j-1].setOutlineColor(sf::Color(0, 0, 0, 0));
+
 }
 
 void movementCircle::renderAll(sf::RenderWindow& window){
@@ -78,6 +82,9 @@ void movementCircle::renderAll(sf::RenderWindow& window){
 }
 
 sf::CircleShape movementCircle::cshape[BOARD_SIZE][BOARD_SIZE];
+sf::RectangleShape whiteRect[BOARD_SIZE * BOARD_SIZE / 2];
+sf::RectangleShape blackRect[BOARD_SIZE * BOARD_SIZE / 2];
+
 movementCircle* movementCircle::instance_ptr =nullptr;
 movementCircle* mcInst = movementCircle::getInstance();
 
@@ -116,12 +123,21 @@ class GameHandler{
 void GameHandler::render(){
     mainWindow.clear();
 
+    // Background Chess Box Squares rendering
+    for(uint8_t x = 0; x< (BOARD_SIZE * BOARD_SIZE / 2) ; x++)
+    {
+        mainWindow.draw(whiteRect[x]);
+    }
+    for(uint8_t x = 0; x< (BOARD_SIZE * BOARD_SIZE / 2); x++)
+    {
+        mainWindow.draw(blackRect[x]);
+    }
+
     for(std::map<std::string, Piece* >::iterator iter = (smInst->worldMap).begin();iter!=(smInst->worldMap).end();iter++)
     {
         mainWindow.draw(*((iter->second)->getSprite()));
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPieceID())<< std::endl;        
         // std::cout << "abc" <<static_cast<int>((iter->second)->getPos().x)<< " " << static_cast<int>((iter->second)->getPos().y) << std::endl;        
-
     }
 
     for(std::vector<Piece*>::iterator iter = (smInst->deadPiece).begin();iter!=(smInst->deadPiece).end();iter++)
@@ -234,16 +250,17 @@ void GameHandler::update(sf::Time deltaTime){
         // BOUND Cursor
         mousePos = sf::Mouse::getPosition(mainWindow);
 
-        if(!checkedPiece){
+        if(!checkedPiece){ // Clicked first time on not held state
             previousHeldPiece = heldPiece;
             heldPiece = smInst->getHeldRef(mousePos);
             if(heldPiece!=nullptr && smInst->whoseTurn()->getPlayerID() != heldPiece->getplayerID()) // clicked on opponent piece
                 heldPiece = nullptr;
             // smInst->whoseTurn()->getPlayerID();
             // std::cout << "heldpiece : " << static_cast<int>(heldPiece->getPieceType()) << std::endl;
-            if(heldPiece!=nullptr){
+            if(heldPiece!=nullptr){ // clicked on some mvalide clickable piece
 
-                //invisble current held piece's possible squares to draw new piece's squares
+                //hide current held piece's possible squares to draw new piece's squares. New clicked piece may be ours or opp's. This is handled in next if.
+                // BUG: Some conditions here seem bullshit like heldpiece and previousheldpiece is same in here
                 if(heldPiece != previousHeldPiece && previousHeldPiece!=nullptr )
                 {
                     for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
@@ -255,7 +272,7 @@ void GameHandler::update(sf::Time deltaTime){
                 }
                 if(previousHeldPiece != nullptr && heldPiece->getplayerID() != previousHeldPiece->getplayerID() && std::find(possibleSquares->begin(), possibleSquares->end(), heldPiece->getPos())!=possibleSquares->end())
                 {
-                    //kill opposite player goti
+                    //kill opposite player goti (On release?)
                     // std::cout << "Kill goti" << std::endl;
                     // previousHeldPiece = heldPiece;
                     heldPiece = nullptr;
@@ -315,7 +332,7 @@ void GameHandler::update(sf::Time deltaTime){
         // if()// TODO check if position is valid
         if(heldPiece != nullptr)
         {
-            // if kept at new square or double clicked on same piece then set indicator incisible
+            // if kept at new square or double clicked on same piece then hide pos indicator 
             if(heldPiece->getPos() != sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))
             || pieceSelectFlag==0)
             {
@@ -326,6 +343,7 @@ void GameHandler::update(sf::Time deltaTime){
             }
 
             // update only if kept on valid square. Piece pos actual update;
+            // Undo Stack structs are updated here.
             if(std::find(possibleSquares->begin(), possibleSquares->end(), sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD))) != possibleSquares->end())
             {
                 pieceState* currMove = new pieceState{.piece = heldPiece,
@@ -336,16 +354,20 @@ void GameHandler::update(sf::Time deltaTime){
                                                      .remTime = smInst->whoseTurn()->getRemTime()
                                                     //  .wasKilledAtMove = 0,
                                                     };
+                // update Pos default set is 1 so this will change getpos as well.
                 heldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                 
                 size_t deadLength = smInst->deadPiece.size();
-                smInst->updateBoard(heldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
-                if(deadLength != smInst->deadPiece.size()){
-                    currMove->killed = true;
-                }
-
                 smInst->movesHist.push_back(*currMove);
                 smInst->lastMove = smInst->movesHist.end()-1;
+                smInst->updateBoard(heldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
+                
+                //somebody just got killed and added to deadpiece vector
+                if(deadLength != smInst->deadPiece.size()){
+                    currMove->killed = true;
+                    (smInst->movesHist.end() - 1)->killed =true;
+                }
+                // this will check if king under check after the move. Helps undo by checking pin if other piece is moved and now king in check. 
                 smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
                 if(smInst->whoseTurn()->stat.undercheck){
                     smInst->stepPast();
@@ -360,6 +382,7 @@ void GameHandler::update(sf::Time deltaTime){
                 else
                 {
                     if(justHadCheck)
+                    // if king was undercheck then this move saved king
                     {
                         smInst->whoseTurn()->kingStatus.setFillColor(sf::Color(CHECK_COLOR,0));
                         smInst->whoseTurn()->kingStatus.setOutlineColor(sf::Color(CHECK_OUT_COLOR,0));
@@ -373,6 +396,9 @@ void GameHandler::update(sf::Time deltaTime){
                         if((xdiff + ydiff) > 2)
                         {
                             smInst->lastPawnJump = true;
+                            currMove->enpassand = true;
+                            currMove->killed = true;
+
                         }
 
                     }
@@ -380,6 +406,8 @@ void GameHandler::update(sf::Time deltaTime){
 
                 }
                 // smInst->updateTurn();
+
+                // Check if opponent is under check or not. Check update
                 smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
                 if(smInst->whoseTurn()->stat.undercheck){
                     // std::cout << "under check opp player"<< std::endl;
@@ -400,6 +428,8 @@ void GameHandler::update(sf::Time deltaTime){
                     //     }
                     // uint16_t possMovesSum = 0;
                     smInst->gameEnded = true;
+                    // Purpose : Check if opponent king has some valide square to sit on or can be blocked , so that it is not checkmate.
+                    // Logic : Check if any of the oppoenents alive piece has a valid move, because valid move will consider king check and you get to know if any piece might block check
                     for(std::vector<Piece*>::iterator iter = smInst->whoseTurn()->alive.begin(); iter!=smInst->whoseTurn()->alive.end(); iter++){
                         smInst->possibleSquaresList(smInst->whoseTurn()->getPlayerID(), (*iter)->getPieceType(), (*iter)->getPos(), tempPossibleSquares, *iter,true);
                         // std::cout << "possibleSquares size : " << tempPossibleSquares.size() << *vecKey((*iter)->getPos()) <<std::endl;
@@ -435,7 +465,7 @@ void GameHandler::update(sf::Time deltaTime){
 
 
         }
-        else
+        else // Mouse release on an empty square where player wants to place piece
         {
             // click to place somewhere. Actual update 
             if(pieceSelectFlag == 1 && previousHeldPiece!=nullptr)
@@ -457,13 +487,14 @@ void GameHandler::update(sf::Time deltaTime){
                     previousHeldPiece->updatePos(sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)));
                     
                     size_t deadLength = smInst->deadPiece.size();
+                    smInst->movesHist.push_back(*currMove);
+                    smInst->lastMove = smInst->movesHist.end()-1;
                     smInst->updateBoard(previousHeldPiece, sf::Vector2i(1 + mousePos.x/(PIECE_SIZE + 2*PIECE_PAD), 1 + mousePos.y/(PIECE_SIZE + 2*PIECE_PAD)) );
                     if(deadLength != smInst->deadPiece.size()){
                         currMove->killed = true;
+                        (smInst->movesHist.end() - 1)->killed =true;
                     }
 
-                    smInst->movesHist.push_back(*currMove);
-                    smInst->lastMove = smInst->movesHist.end()-1;
                     smInst->whoseTurn()->stat.undercheck = smInst->underCheck(smInst->whoseTurn(), smInst->whoseTurn()->getKingPos());
                     if(smInst->whoseTurn()->stat.undercheck){
                         smInst->stepPast();
@@ -590,11 +621,12 @@ void GameHandler::handleKeyInput(sf::Keyboard::Key key, bool state){
             if(!state)
             {
                 smInst->stepPast();
-                for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
-                {
-                    // std::cout<< iter->x << " inv " << iter->y << std::endl;
-                    mcInst->setInvisible(iter->x, iter->y);
-                }
+                if(possibleSquares != nullptr)
+                    for(std::vector<sf::Vector2i>::iterator iter = possibleSquares->begin(); iter!=possibleSquares->end();iter++ )
+                    {
+                        // std::cout<< iter->x << " inv " << iter->y << std::endl;
+                        mcInst->setInvisible(iter->x, iter->y);
+                    }
             // std::cout << "left key" << smInst->movesHist.size() << smInst->getTotalMoves() << smInst->getCurrentMove() << std::endl;
 
             }
@@ -626,6 +658,27 @@ GameHandler::GameHandler(): mainWindow(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_
     {
         std::cerr << "Error loading Gengar texture! " << std::endl; 
     }
+    
+    for(uint8_t x = 0; x< BOARD_SIZE; x++)
+    {
+        for(uint8_t y = 0; y< BOARD_SIZE; y++)
+        {
+            if( (x+y)%2 == 0)
+            {
+                uint16_t index = x * (BOARD_SIZE/2) + (x%2==0 ? y/2 : (y-1)/2);
+                whiteRect[index].setSize( sf::Vector2f((PIECE_SIZE + 2*PIECE_PAD), (PIECE_SIZE + 2*PIECE_PAD)));
+                whiteRect[index].setPosition((y)*(PIECE_SIZE + 2*PIECE_PAD) , (x*(PIECE_SIZE + 2*PIECE_PAD)));
+                whiteRect[index].setFillColor(sf::Color(WHITERECT));
+            }
+            else
+            {
+                uint16_t index = (x * (BOARD_SIZE/2)) + (x%2!=0 ? y/2 : (y-1)/2);
+                blackRect[index].setSize( sf::Vector2f((PIECE_SIZE + 2*PIECE_PAD), (PIECE_SIZE + 2*PIECE_PAD)));
+                blackRect[index].setPosition((y)*(PIECE_SIZE + 2*PIECE_PAD) , (x*(PIECE_SIZE + 2*PIECE_PAD)));
+                blackRect[index].setFillColor(sf::Color(BLACKRECT));
+            }
+        }
+    }
 
     player.setTexture(testTexture);
     player.scale(0.5, 0.5);
@@ -639,9 +692,6 @@ int main()
 {
     GameHandler* mainHandler = new GameHandler();
     mainHandler->run();
-
-
-
 
     // sf::RenderWindow window(sf::VideoMode(-100, 0-100), "SFML works!");
     // sf::CircleShape shape(200.f);

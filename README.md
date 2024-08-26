@@ -16,20 +16,11 @@ Add Score
 Add timer
 Add Undo/Redo
 Add Keyboard
+checks, checkmate,Pawn two step, win/ winning criteria,
+Add  Pawn enpassant
 
 
 TODO: 
-there are places with elements erase and insert where pointer substitution will be better 
-Clock mischief resolve on undo, redo
-Add checks, checkmate, winning criteria, Pawn enpassant, Pawn two step, draw/win/, pawn promotion
-Add moveslist scrolling
-Add Arrows
-Add Premoves
-Add Bar
-Add Engine
-Add Network
-Flip Board
-User customization
-Variants
+
 
 END Goal: Pokemon style game with variants as quests and levels. arrow vortex, premove square red where enemies spawn. cuphead style board where opponents are GM with special preferences. make it absurd.

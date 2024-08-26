@@ -63,7 +63,8 @@ const std::string pieceLoadFile[]=
 };
 
 #define TOTAL_DIR 8
-std::vector<sf::Vector2i> pawnMoves = {sf::Vector2i(0,1),
+std::vector<sf::Vector2i> pawnMoves = {
+                         sf::Vector2i(0,1),
                          sf::Vector2i(1,1),
                          sf::Vector2i(1,0),
                          sf::Vector2i(1,-1),
@@ -87,7 +88,7 @@ struct pieceState{
     Piece* piece;
     sf::Vector2i wasPos;
     sf::Vector2i isPos;
-    bool killed;
+    bool killed, enpassand;
     sf::Time remTime;
     // uint16_t wasKilledAtMove;
     // std::map<std::string, Piece* >::iterator worldIter;
@@ -196,7 +197,7 @@ void stateManager::stepFuture(){
                             std::find(lastDeadMove->piece->getPlayerRef()->alive.begin(), 
                             lastDeadMove->piece->getPlayerRef()->alive.end(),
                             lastDeadMove->piece));
-        worldMap.erase(worldMap.find(*vecKey(lastMove->isPos)));
+        worldMap.erase(worldMap.find(*vecKey(lastDeadMove->wasPos)));
         updateHell(lastDeadMove->piece->getPlayerRef());
     }
     worldMap.insert({*vecKey(lastMove->isPos), lastMove->piece});
@@ -206,7 +207,6 @@ void stateManager::stepFuture(){
 void stateManager::stepPast(){
     if(currMove == 0)
         return;
-
     lastMove->piece->updatePos(lastMove->wasPos);
     worldMap.erase(worldMap.find(*vecKey(lastMove->isPos)));
     worldMap.insert({*vecKey(lastMove->wasPos), lastMove->piece});
@@ -218,8 +218,10 @@ void stateManager::stepPast(){
         deadPiece.pop_back(); // updateshell drawing
         revivedPiece->getSprite()->scale(1/0.3, 1/0.3);
         revivedPiece->getPlayerRef()->alive.push_back(revivedPiece);
-        revivedPiece->updatePos(lastMove->isPos);
-        worldMap.insert({*vecKey(lastMove->isPos), revivedPiece});
+
+        revivedPiece->updatePos(lastDeadMove->wasPos);
+        worldMap.insert({*vecKey(lastDeadMove->wasPos), revivedPiece});
+
         --lastDeadMove;
     }
     
@@ -337,6 +339,9 @@ void stateManager::resetGame(){
 }
 
 //instead of shadowmap. use stack for undo
+/*
+
+*/
 void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
     for(std::map<std::string, Piece* >::iterator iter = worldMap.begin();iter!=worldMap.end();iter++)
     {
@@ -384,6 +389,48 @@ void stateManager::updateBoard(Piece* t_piece, sf::Vector2i t_pos){
                 }
                     // worldMap.erase(it);
                  worldMap.erase(it);
+            }
+            // pawn enpassant doesnt stand on opp corpse
+            else if( iter->second->getPieceType()==TextureID::Pawn && (abs(iter->second->getPos().x - lastMove->wasPos.x) == 1 ))
+            {
+                std::map<std::string, Piece* >::iterator opp = worldMap.find(*vecKey(t_pos - pawnMoves[iter->second->getDirection()]));
+                Player* playerRef = opp->second->getPlayerRef();
+                std::vector<Piece*>::iterator killedPiece = std::find(playerRef->alive.begin(), playerRef->alive.end(), opp->second);
+                // worldMap.erase(it);
+                // worldMap.insert({*vecKey(t_pos), t_piece});
+
+                // if(underCheck(t_piece->getPlayerRef(), t_piece->getPlayerRef()->getKingPos()))
+                // {
+                //     worldMap = shadowMap;
+                //     return;
+                // }
+                pieceState* deadMove = new pieceState{*killedPiece,
+                                                     (*killedPiece)->getPos(),
+                                                     sf::Vector2i(0,0),
+                                                     true,
+                                                    //  .wasKilledAtMove = 0,
+                                                    };
+                deadHist.push_back(*deadMove);
+                lastDeadMove = deadHist.end() - 1;
+                if(killedPiece == playerRef->alive.end() )
+                    std::cout<< "Deleting player logic problem" << std::endl;
+                else{
+                    playerRef->dead.push_back(*killedPiece);
+                    deadPiece.push_back(*killedPiece);
+                    (*killedPiece)->getSprite()->scale(0.3, 0.3);
+                    playerRef->alive.erase(killedPiece);
+                    updateHell(playerRef);
+                // for(std::vector<Piece*>::iterator i = (playerRef->alive).begin();i != (playerRef->alive).end();i++)
+                //     std::cout<< "alive" << (*(*i)).getPieceID() << std::endl;
+
+                // for(std::vector<Piece*>::iterator i = (playerRef->dead).begin();i != (playerRef->dead).end();i++)
+                //     std::cout<< "dead" << (*(*i)).getPieceID() << std::endl;
+                std::cout<< "deadpawn" << std::endl;
+
+
+                }
+                    // worldMap.erase(it);
+                 worldMap.erase(opp);
             }
             worldMap.insert({*vecKey(t_pos), t_piece});
             break;
@@ -451,10 +498,13 @@ void stateManager::calculateScore(Player* playerRef)
     playerRef->scoreText.setString("Player"+std::to_string(playerRef->getPlayerID())+" : "+ str_score);
 }
 
+/*
+Updates player turn and restarts clock accordingly 
+*/
 void stateManager::updateTurn(bool future){
     // clear kingAttackers and smAttacksquares here maybe
     if(future)
-    playerTurn = (playerTurn + 1) % playerList.size();
+        playerTurn = (playerTurn + 1) % playerList.size();
     else
         playerTurn = (playerTurn + (playerList.size()-1)) % playerList.size();
     // std::cout << "playerturn " << static_cast<int>(playerTurn) << std::endl;
@@ -487,9 +537,11 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
         {
             if (worldMap.find(*vecKey(newPos2))!=worldMap.end())
             {
+                // Some piece found in this direction. check if in given direction the piece is pawn and belongs to opp
                 if(worldMap[*vecKey(newPos2)]->getPieceType()==TextureID::pieceName::Pawn && worldMap[*vecKey(newPos2)]->getplayerID() != playerRef->getPlayerID()){
                     // possibleSquaresList(worldMap[*vecKey(newPos2)]->getplayerID(),TextureID::pieceName::Pawn, newPos2, worldMap[*vecKey(newPos2)]);
                     // TODO how to determine if thing is pinned
+                    // check if cross positioned square is pawn and not front of king
                     if((newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])
                     || (newPos == newPos2 + pawnMoves[(worldMap[*vecKey(newPos2)]->getDirection()+ 1)%TOTAL_DIR]) ){
                         pawnFound = true;
@@ -501,7 +553,7 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
             }
         }
     }
-
+    // king will be attacked by pawn on selected square (piecePos)
     if(pawnFound){
         //TODO only stat = mk
         return true;
@@ -561,7 +613,9 @@ bool stateManager::underCheck(Player* playerRef, sf::Vector2i piecePos){
 
 // }
 
-
+/*
+Returns pointer to piece having pos provided as argument
+*/
 Piece* stateManager::getHeldRef(sf::Vector2i mouse){
     sf::Vector2i m;
     m.x = mouse.x / (PIECE_SIZE + 2*PIECE_PAD) + 1;
@@ -579,13 +633,15 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
     switch(t_pieceType){
         case TextureID::pieceName::Pawn: // TODO:: enpassant and shit
         {
+            // enpassant
             if(lastPawnJump)
             {
-                if( abs(lastMove->isPos.x - heldPiece->getPos().x) == 1 )
+                if( abs(lastMove->isPos.x - heldPiece->getPos().x) == 1 && (abs(lastMove->isPos.y - heldPiece->getPos().y) == 0) )
                 {
                     possibleSquares.push_back(lastMove->isPos + pawnMoves[heldPiece->getDirection()]);
                 }
             }
+            // initial 2 step pawn move
             if(heldPiece->getPos() == heldPiece->homePos)
             {
                 if(worldMap.find(*vecKey(currPos + 2*pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
@@ -594,11 +650,15 @@ std::vector<sf::Vector2i>* stateManager::possibleSquaresList(uint8_t t_playerID,
                     possibleSquares.push_back(currPos + 2*pawnMoves[heldPiece->getDirection()]);
                 } 
             }
+
+            // one step move check forward
             if(worldMap.find(*vecKey(currPos + pawnMoves[heldPiece->getDirection()])) == worldMap.end()) // nothing in front
             {
                 // if(whoseTurn()->stat.undercheck)
                 possibleSquares.push_back(currPos + pawnMoves[heldPiece->getDirection()]);
-            }    
+            }
+
+            // cross check pawn kill move possiblility
             if(worldMap.find(*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])) != worldMap.end() && worldMap[*vecKey(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR])]->getplayerID()!= t_playerID)
             {
                 possibleSquares.push_back(currPos + pawnMoves[(heldPiece->getDirection()+ (TOTAL_DIR-1))%TOTAL_DIR]);

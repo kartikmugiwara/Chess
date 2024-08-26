@@ -1,7 +1,7 @@
 #ifndef __INCLUDE_GAMECONFIG__
 #define __INCLUDE_GAMECONFIG__
 
-#define BOARD_SIZE 8
+#define BOARD_SIZE 8 //keep this even. or edit a lot of things.
 #define PLAYER_NUM 2
 #define PIECE_DIM 16
 #define SCALE_F 6.0
@@ -16,5 +16,7 @@
 #define TOTAL_GAME_SEC 60 * 10 
 #define CHECK_COLOR 255,255,0
 #define CHECK_OUT_COLOR 255,0,0
+#define WHITERECT 255,255,255,255
+#define BLACKRECT 0,200,200,100
 
 #endif 
